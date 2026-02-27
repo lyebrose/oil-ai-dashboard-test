@@ -22,7 +22,7 @@ st.markdown(
     """
 <style>
 .stApp { background: #FBF6EC; }
-.block-container { padding-top: 1.1rem; padding-bottom: 1.2rem; max-width: 1400px; }
+.block-container { padding-top: 1.1rem; padding-bottom: 1.2rem; }
 
 /* Headings */
 h1, h2, h3, h4 { color: #0B1F44; letter-spacing: -0.2px; }
@@ -95,7 +95,7 @@ div[data-testid="stDataFrame"] {
 # ---------------- Header ----------------
 st.markdown("## 🛢️ WTI Market Dashboard")
 st.markdown(
-    "<div class='kicker'>1-week horizon • Technical model • Geopolitical context • Educational decision support (not financial advice)</div>",
+    "<div class='kicker'>1-week horizon • Technical model • Educational decision support (not financial advice)</div>",
     unsafe_allow_html=True,
 )
 
@@ -110,18 +110,8 @@ with st.sidebar:
     st.markdown("### Display")
     show_feature_table = st.checkbox("Show latest feature table", value=True)
     show_importance = st.checkbox("Show feature importance", value=True)
-
-    st.markdown("---")
-    st.markdown("### Geopolitics panel")
-    geo_days = st.selectbox("Lookback (days)", [3, 7, 14], index=1)
+    geo_days = st.selectbox("Geopolitics lookback (days)", [3, 7, 14], index=1)
     geo_max_items = st.selectbox("Max headlines", [6, 8, 10, 12], index=2)
-
-    st.markdown("---")
-    st.markdown("### Chart smoothing")
-    show_ma_overlay = st.checkbox("Show 20d moving average overlay", value=True)
-    smooth_lines = st.checkbox("Use smooth curve rendering", value=True)
-    show_fill = st.checkbox("Subtle fill under price", value=True)
-
 
 # ---------------- Data build ----------------
 @st.cache_data(show_spinner=False)
@@ -132,12 +122,7 @@ def build_dataset(start_date: str, horizon_days: int) -> pd.DataFrame:
     df = build_model_frame(df)
     return df
 
-
 df = build_dataset(start_date, horizon_days)
-
-# Extra plotting columns (design / readability)
-df["ma_20_plot"] = df["Settle"].rolling(20).mean()
-df["ma_50_plot"] = df["Settle"].rolling(50).mean()
 
 # ---------------- Model training (latest) ----------------
 model, latest_pred = train_latest_model(df)
@@ -152,16 +137,7 @@ if len(df) > 6:
     week_change = float((df["Settle"].iloc[-1] / df["Settle"].iloc[-6] - 1) * 100)
 
 risk = float(df["vol_20d"].iloc[-1]) if "vol_20d" in df.columns else np.nan
-
-# Volatility regime (more nuanced than a single cutoff)
-if risk < 0.02:
-    vol_label = "Low"
-elif risk < 0.035:
-    vol_label = "Normal"
-elif risk < 0.05:
-    vol_label = "Elevated"
-else:
-    vol_label = "Extreme"
+vol_label = "High" if risk >= 0.03 else "Normal"
 
 # Signal strength proxy (based on forecast magnitude, capped)
 signal_strength = min(abs(pred_pct) / 3.0, 1.0)
@@ -222,7 +198,7 @@ with c4:
 
 st.markdown("---")
 
-# ---------------- Geopolitics: headlines + scoring ----------------
+# ---------------- Geopolitics: lightweight headlines + coherent scoring ----------------
 UP_KEYS = [
     "attack", "strike", "drone", "missile", "explosion",
     "pipeline", "refinery", "terminal", "shutdown", "outage",
@@ -246,7 +222,6 @@ DRIVER_BUCKETS = {
     "Demand macro": ["recession", "weak demand", "slowdown", "demand slump"],
 }
 
-
 def classify_impact(title: str):
     t = (title or "").lower()
     up_hits = sum(1 for k in UP_KEYS if k in t)
@@ -262,7 +237,6 @@ def classify_impact(title: str):
         return ("Downward pressure", conf, "More cues for easing risk / higher supply / weaker demand.")
     return ("Mixed", 0.55, "Contains both tightening and easing cues.")
 
-
 def extract_drivers(headlines):
     counts = {k: 0 for k in DRIVER_BUCKETS.keys()}
     for h in headlines:
@@ -273,9 +247,12 @@ def extract_drivers(headlines):
     top = sorted(counts.items(), key=lambda x: x[1], reverse=True)
     return [(k, v) for k, v in top if v > 0][:4]
 
-
-@st.cache_data(show_spinner=False, ttl=60 * 30)  # cache for 30 minutes
+@st.cache_data(show_spinner=False, ttl=60*30)  # cache for 30 minutes
 def fetch_geo_headlines(days: int = 7, max_items: int = 10):
+    """
+    Fetch recent geopolitics/oil-related headlines from GDELT (lightweight).
+    Returns list of dicts: title, url, date, source.
+    """
     end = datetime.utcnow()
     start = end - timedelta(days=days)
     start_s = start.strftime("%Y%m%d%H%M%S")
@@ -312,8 +289,13 @@ def fetch_geo_headlines(days: int = 7, max_items: int = 10):
         )
     return out
 
-
 def geo_summary(headlines):
+    """
+    Build:
+      - net risk score [-100..100] (positive = upward pressure)
+      - counts
+      - coherent takeaway
+    """
     if not headlines:
         return 0.0, {"up": 0, "down": 0, "mixed": 0, "unclear": 0}, "No headlines loaded."
 
@@ -330,12 +312,16 @@ def geo_summary(headlines):
             score -= conf
         elif direction == "Mixed":
             counts["mixed"] += 1
+            score += 0.0
         else:
             counts["unclear"] += 1
+            score += 0.0
 
+    # Normalize roughly to [-100..100]
     denom = max(len(headlines) * 0.85, 1)
     net = float(np.clip((score / denom) * 100, -100, 100))
 
+    # Coherent takeaway text
     if net >= 25:
         takeaway = "Geopolitical tape is skewed toward **supply risk / tighter supply** → upward pressure bias."
     elif net <= -25:
@@ -345,7 +331,6 @@ def geo_summary(headlines):
 
     return net, counts, takeaway
 
-
 def pill_for_geo(net_score: float):
     if net_score >= 25:
         return ("pill-up", "RISK BIAS: UP")
@@ -353,55 +338,17 @@ def pill_for_geo(net_score: float):
         return ("pill-down", "RISK BIAS: DOWN")
     return ("pill-neutral", "RISK BIAS: MIXED")
 
-
 # ---------------- Tabs ----------------
 tab1, tab2, tab3 = st.tabs(["📈 Overview", "🧪 Backtest", "🧠 Model Inputs"])
 
 # ---------- Tab 1: Overview ----------
 with tab1:
+    # Top charts row: remove empty space by making the right column fully stacked
     left, right = st.columns([1.55, 1])
 
-    # ---- Price chart (smoother design) ----
     with left:
         st.markdown("### Price")
-
-        plot_df = df.reset_index().copy()
-        plot_series = ["Settle"]
-        if show_ma_overlay:
-            plot_series.append("ma_20_plot")
-
-        fig_price = px.line(
-            plot_df,
-            x="Date",
-            y=plot_series,
-            title="WTI Price (Daily) + 20D Moving Average",
-        )
-
-        # Style traces: make raw price nicer + optional smoothing + subtle fill
-        # Plotly assigns names equal to column names
-        # Price trace
-        price_shape = "spline" if smooth_lines else "linear"
-        fig_price.update_traces(
-            selector=dict(name="Settle"),
-            line=dict(width=3, shape=price_shape, smoothing=0.45 if smooth_lines else 0),
-        )
-
-        if show_fill:
-            fig_price.update_traces(
-                selector=dict(name="Settle"),
-                fill="tozeroy",
-                fillcolor="rgba(30,77,183,0.08)",
-            )
-
-        # MA trace
-        if show_ma_overlay:
-            fig_price.update_traces(
-                selector=dict(name="ma_20_plot"),
-                line=dict(width=3, dash="dash", shape="spline", smoothing=0.6),
-                opacity=0.9,
-            )
-
-        # Calm layout (less erratic feel)
+        fig_price = px.line(df.reset_index(), x="Date", y="Settle", title="WTI Price (daily)")
         fig_price.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
@@ -411,21 +358,15 @@ with tab1:
             yaxis_title="Price ($)",
             margin=dict(l=10, r=10, t=55, b=10),
             height=520,
-            legend_title_text="",
         )
-        fig_price.update_xaxes(showgrid=False, zeroline=False)
-        fig_price.update_yaxes(showgrid=True, gridcolor="rgba(16,42,67,0.08)", zeroline=False)
-
+        fig_price.update_traces(line=dict(width=2))
         st.plotly_chart(fig_price, use_container_width=True)
 
-    # ---- Volatility + Returns (no empty gap; stacked charts fill column) ----
     with right:
         st.markdown("### Volatility & Returns")
         g = df.reset_index()
 
-        # Vol chart smoother line + calmer grid
-        fig_vol = px.line(g, x="Date", y="vol_20d", title="20-day volatility (std of daily log returns)")
-        fig_vol.update_traces(line=dict(width=2.6, shape="spline", smoothing=0.55))
+        fig_vol = px.line(g, x="Date", y="vol_20d", title="20-day volatility (std)")
         fig_vol.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
@@ -435,13 +376,10 @@ with tab1:
             yaxis_title="Vol",
             margin=dict(l=10, r=10, t=45, b=10),
             height=245,
-            legend_title_text="",
         )
-        fig_vol.update_xaxes(showgrid=False, zeroline=False)
-        fig_vol.update_yaxes(showgrid=True, gridcolor="rgba(16,42,67,0.08)", zeroline=False)
+        fig_vol.update_traces(line=dict(width=2))
         st.plotly_chart(fig_vol, use_container_width=True)
 
-        # Returns bars - clean formatting, a bit more history
         fig_ret = px.bar(g.tail(120), x="Date", y="ret_1d", title="Daily log returns (last ~6 months)")
         fig_ret.update_layout(
             template="simple_white",
@@ -453,8 +391,6 @@ with tab1:
             margin=dict(l=10, r=10, t=45, b=10),
             height=245,
         )
-        fig_ret.update_xaxes(showgrid=False, zeroline=False)
-        fig_ret.update_yaxes(showgrid=True, gridcolor="rgba(16,42,67,0.08)", zeroline=False)
         st.plotly_chart(fig_ret, use_container_width=True)
 
     st.markdown("---")
@@ -474,6 +410,7 @@ with tab1:
         if not headlines:
             st.info("Couldn’t load headlines right now. (API/network). Try again later.")
         else:
+            # Render each headline compactly
             for h in headlines:
                 direction, conf, reason = classify_impact(h.get("title", ""))
                 if direction == "Upward pressure":
@@ -527,6 +464,7 @@ with tab1:
             unsafe_allow_html=True,
         )
 
+        # Driver breakdown
         drivers = extract_drivers(headlines if "headlines" in locals() else [])
         st.markdown("#### Top drivers detected")
         if not drivers:
@@ -535,6 +473,7 @@ with tab1:
             for name, ct in drivers:
                 st.markdown(f"- **{name}** — {ct} headline(s)")
 
+        # Actionable interpretation
         st.markdown("#### How this could affect oil")
         st.write(
             "- **Supply risk (shipping chokepoints, outages, attacks)** tends to add a *risk premium* → upward pressure.\n"
@@ -562,7 +501,6 @@ with tab2:
     )
 
     fig_bt = px.line(bt_df, x="Date", y=["truth", "pred"], title="Truth vs Predicted (1-week log return)")
-    fig_bt.update_traces(line=dict(width=2.5, shape="spline", smoothing=0.5))
     fig_bt.update_layout(
         template="simple_white",
         paper_bgcolor="#FFFDF6",
@@ -574,8 +512,6 @@ with tab2:
         legend_title_text="",
         height=520,
     )
-    fig_bt.update_xaxes(showgrid=False, zeroline=False)
-    fig_bt.update_yaxes(showgrid=True, gridcolor="rgba(16,42,67,0.08)", zeroline=False)
     st.plotly_chart(fig_bt, use_container_width=True)
 
     if show_importance:
@@ -595,6 +531,5 @@ with tab3:
     st.write(
         "- Forecast horizon is **next trading week** (5 or 10 trading days).\n"
         "- Signal strength shown is a **proxy** based on forecast magnitude.\n"
-        "- The price line uses optional **spline rendering** + an optional **moving average overlay** (visual smoothing only).\n"
         "- Geopolitics panel uses **recent headlines** + a transparent heuristic to summarize possible pressure."
     )
