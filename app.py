@@ -8,9 +8,30 @@ from datetime import datetime, timedelta
 import math
 
 from data import load_wti
-from features import add_technical_features, make_targets, build_model_frame, add_participation_ratio
+from features import add_technical_features, make_targets, build_model_frame
 from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
 
+def add_participation_ratio(df: pd.DataFrame) -> pd.DataFrame:
+    out = df.copy()
+
+    # Ensure ret_1d exists
+    if "ret_1d" not in out.columns:
+        out["ret_1d"] = np.log(out["Settle"]).diff()
+
+    # If volume missing, create it (prevents crashes)
+    if "Volume" not in out.columns:
+        out["Volume"] = np.nan
+
+    # Rolling baseline + relative volume
+    out["vol_avg_20"] = out["Volume"].rolling(20).mean()
+    out["vol_rel_20"] = out["Volume"] / out["vol_avg_20"]
+
+    denom = out["vol_rel_20"].replace([0, np.inf, -np.inf], np.nan)
+
+    # High = big move on low participation ("thin/flukey")
+    out["move_per_participation"] = out["ret_1d"].abs() / denom
+
+    return out
 # ---------------- Page config ----------------
 st.set_page_config(
     page_title="WTI AI Dashboard",
