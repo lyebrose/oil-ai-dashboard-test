@@ -13,7 +13,7 @@ from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
 
 # ---------------- Page config ----------------
 st.set_page_config(
-    page_title="BarrelX - An AI Powered WTI Market Dashboard",
+    page_title="WTI AI Dashboard",
     page_icon="🛢️",
     layout="wide",
 )
@@ -94,7 +94,7 @@ div[data-testid="stDataFrame"] {
 )
 
 # ---------------- Header ----------------
-st.markdown("## 🛢️ WTI Market Dashboard")
+st.markdown("## 🛢️ BarrelX - An AI Powered WTI Market Dashboard")
 st.markdown(
     "<div class='kicker'>1-week horizon • Technical model • Educational decision support (not financial advice)</div>",
     unsafe_allow_html=True,
