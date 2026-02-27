@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import requests
+from datetime import datetime, timedelta
 
 from data import load_wti
 from features import add_technical_features, make_targets, build_model_frame
@@ -224,6 +226,88 @@ with c4:
     st.progress(conf)
 
 st.markdown("<hr/>", unsafe_allow_html=True)
+# ---------- Geopolitical events: lightweight headline fetch + heuristic impact ----------
+
+@st.cache_data(show_spinner=False, ttl=60*30)  # cache for 30 minutes
+def fetch_geo_headlines(days: int = 7, max_items: int = 10):
+    """
+    Fetch recent geopolitics/oil-related headlines from GDELT (lightweight).
+    Returns a list of dicts: {title, url, date, source, tone}
+    """
+    end = datetime.utcnow()
+    start = end - timedelta(days=days)
+
+    start_s = start.strftime("%Y%m%d%H%M%S")
+    end_s = end.strftime("%Y%m%d%H%M%S")
+
+    # Keep query fairly broad but relevant
+    query = (
+        '(oil OR "crude oil" OR WTI OR Brent OR OPEC OR refinery OR pipeline OR tanker) '
+        'AND (sanctions OR war OR conflict OR "Middle East" OR Russia OR Iran OR "Red Sea" '
+        'OR "Strait of Hormuz" OR Venezuela OR Libya OR Nigeria)'
+    )
+
+    url = (
+        "https://api.gdeltproject.org/api/v2/doc/doc"
+        f"?query={requests.utils.quote(query)}"
+        f"&mode=artlist&format=json"
+        f"&startdatetime={start_s}&enddatetime={end_s}"
+        f"&maxrecords={max_items}&sort=hybridrel"
+    )
+
+    r = requests.get(url, timeout=12)
+    r.raise_for_status()
+    j = r.json()
+    articles = j.get("articles", []) or []
+
+    out = []
+    for a in articles:
+        out.append(
+            {
+                "title": a.get("title", "").strip(),
+                "url": a.get("url", ""),
+                "date": a.get("seendate", ""),
+                "source": a.get("sourceCountry", "") or a.get("sourceCollection", ""),
+                "tone": a.get("tone", None),
+            }
+        )
+    return out
+
+
+def impact_heuristic(title: str):
+    """
+    Very simple explainable rules:
+    returns (direction, confidence_0to1, reason)
+    """
+    t = (title or "").lower()
+
+    # Supply disruption / transport chokepoints: usually upward pressure
+    up_keywords = [
+        "attack", "strike", "drone", "missile", "explosion",
+        "pipeline", "refinery", "terminal", "shutdown", "outage",
+        "red sea", "houthi", "strait of hormuz", "tanker",
+        "sanction", "embargo", "escalat", "war", "conflict",
+        "opec cuts", "cut output", "production cut"
+    ]
+
+    # Supply increases / de-escalation: usually downward pressure
+    down_keywords = [
+        "ceasefire", "truce", "deal", "agreement", "talks",
+        "raise output", "increase output", "production hike",
+        "opec+ hikes", "release reserves", "spr release",
+        "demand slump", "recession", "weak demand"
+    ]
+
+    up = any(k in t for k in up_keywords)
+    down = any(k in t for k in down_keywords)
+
+    if up and not down:
+        return ("Upward pressure", 0.75, "Signals higher supply risk / disruptions / tighter supply.")
+    if down and not up:
+        return ("Downward pressure", 0.70, "Signals easing risk or higher supply / weaker demand.")
+    if up and down:
+        return ("Mixed / unclear", 0.55, "Contains both tightening and easing cues; impact depends on details.")
+    return ("Unclear", 0.45, "Not enough signal from headline alone.")
 
 # ---------------- Tabs ----------------
 tab1, tab2, tab3 = st.tabs(["📈 Overview", "🧪 Backtest", "🧠 Model Inputs"])
@@ -279,6 +363,52 @@ with tab1:
             margin=dict(l=10, r=10, t=50, b=10),
         )
         st.plotly_chart(fig_ret, use_container_width=True)
+        st.markdown("<hr/>", unsafe_allow_html=True)
+
+bottom_left, bottom_right = st.columns([1.35, 1])
+
+with bottom_left:
+    st.markdown("### 🌍 Geopolitical events & potential oil impact")
+    st.caption("Recent headlines + a simple heuristic about supply risk and price pressure.")
+
+    try:
+        headlines = fetch_geo_headlines(days=7, max_items=10)
+
+        if not headlines:
+            st.info("No recent geopolitics/oil headlines returned right now.")
+        else:
+            for h in headlines:
+                direction, conf, reason = impact_heuristic(h["title"])
+
+                # Pretty status line
+                if direction == "Upward pressure":
+                    st.markdown(f"**🟦 {direction}** — {conf*100:.0f}%")
+                elif direction == "Downward pressure":
+                    st.markdown(f"**🟫 {direction}** — {conf*100:.0f}%")
+                else:
+                    st.markdown(f"**⚪ {direction}** — {conf*100:.0f}%")
+
+                # Headline with link
+                if h["url"]:
+                    st.markdown(f"- [{h['title']}]({h['url']})")
+                else:
+                    st.markdown(f"- {h['title']}")
+
+                # Small reason line
+                st.caption(reason)
+                st.markdown("")
+
+    except Exception:
+        st.warning("Couldn’t load headlines right now (network/API). Try again later.")
+
+with bottom_right:
+    st.markdown("### 🧭 How to interpret this panel")
+    st.write(
+        "- Oil is **very sensitive to supply shocks** (pipelines, refineries, shipping chokepoints).\n"
+        "- **Sanctions / conflict escalation** often creates *risk premium* → upward pressure.\n"
+        "- **De-escalation / supply increases / demand weakness** often reduce that premium.\n"
+        "- Headlines are noisy—use this as **context**, not a guarantee."
+    )
 
 # ---------- Tab 2: Backtest ----------
 with tab2:
