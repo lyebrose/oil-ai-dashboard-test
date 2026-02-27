@@ -116,6 +116,28 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### What-if / Position sizing")
     use_custom_return = st.checkbox("Use custom predicted return (%)", value=False)
+    st.markdown("---")
+st.markdown("### Trade simulator")
+
+sim_mode = st.selectbox(
+    "Mode",
+    ["Percent exposure (simple)", "WTI futures (CL)"],
+    index=0,
+)
+
+amount = st.number_input("Capital ($)", min_value=0.0, value=10000.0, step=500.0)
+
+use_custom_return = st.checkbox("Use custom predicted return (%)", value=False)
+
+custom_return_pct = None
+if use_custom_return:
+    custom_return_pct = st.number_input("Custom predicted return (%)", value=0.0, step=0.25)
+
+contracts = 1
+margin_per_contract = 8000.0
+if sim_mode == "WTI futures (CL)":
+    contracts = st.number_input("Contracts (CL)", min_value=0, value=1, step=1)
+    margin_per_contract = st.number_input("Margin per contract ($) (assumption)", min_value=0.0, value=8000.0, step=250.0)
     
 
 # ---------------- Data build ----------------
@@ -202,6 +224,155 @@ with c4:
     st.progress(signal_strength)
 
 st.markdown("---")
+# ---------------- Trade simulator (exposure + futures + risk bands) ----------------
+st.markdown("### 🧮 Trade simulator (return + futures P/L + risk bands)")
+
+# Use model forecast unless custom return is enabled
+used_return_pct = float(custom_return_pct) if (use_custom_return and custom_return_pct is not None) else float(pred_pct)
+used_logret = np.log1p(used_return_pct / 100.0)  # convert % to log return
+
+price_now = float(df["Settle"].iloc[-1])
+
+# Volatility scaling to horizon: vol_20d is daily log-return std
+daily_vol = float(df["vol_20d"].iloc[-1]) if "vol_20d" in df.columns and pd.notna(df["vol_20d"].iloc[-1]) else 0.0
+h = int(horizon_days)
+sigma_h = daily_vol * np.sqrt(max(h, 1))  # horizon std in log-return space
+
+def norm_cdf(x: float) -> float:
+    # normal CDF using erf (no scipy dependency)
+    return 0.5 * (1.0 + float(np.math.erf(x / np.sqrt(2.0))))
+
+# Expected / band returns (log-return model: r ~ N(mu, sigma_h))
+mu = used_logret
+r_1s_low, r_1s_high = mu - sigma_h, mu + sigma_h
+r_2s_low, r_2s_high = mu - 2 * sigma_h, mu + 2 * sigma_h
+
+# Convert to prices
+price_exp = price_now * np.exp(mu)
+price_1s_low = price_now * np.exp(r_1s_low)
+price_1s_high = price_now * np.exp(r_1s_high)
+price_2s_low = price_now * np.exp(r_2s_low)
+price_2s_high = price_now * np.exp(r_2s_high)
+
+# Probability of profit (P[r > 0]) under normal approximation
+p_profit = 0.0
+if sigma_h > 0:
+    z = (0.0 - mu) / sigma_h
+    p_profit = 1.0 - norm_cdf(z)
+else:
+    p_profit = 1.0 if mu > 0 else (0.0 if mu < 0 else 0.5)
+
+# Compute P/L depending on mode
+# - Percent exposure: P/L = capital * return
+# - Futures: CL contract = 1,000 barrels, P/L = (price_change) * 1000 * contracts
+CONTRACT_SIZE_BBL = 1000.0
+
+def pl_percent(capital: float, r_log: float) -> float:
+    return capital * (np.exp(r_log) - 1.0)
+
+def pl_futures(contracts_n: int, price_start: float, r_log: float) -> float:
+    price_end = price_start * np.exp(r_log)
+    return (price_end - price_start) * CONTRACT_SIZE_BBL * float(contracts_n)
+
+if sim_mode == "Percent exposure (simple)":
+    pl_exp = pl_percent(amount, mu)
+    pl_1s_low = pl_percent(amount, r_1s_low)
+    pl_1s_high = pl_percent(amount, r_1s_high)
+    pl_2s_low = pl_percent(amount, r_2s_low)
+    pl_2s_high = pl_percent(amount, r_2s_high)
+
+    notional = amount
+    leverage_label = "1.0× (capital exposure)"
+    margin_used = 0.0
+
+else:
+    c = int(contracts)
+    pl_exp = pl_futures(c, price_now, mu)
+    pl_1s_low = pl_futures(c, price_now, r_1s_low)
+    pl_1s_high = pl_futures(c, price_now, r_1s_high)
+    pl_2s_low = pl_futures(c, price_now, r_2s_low)
+    pl_2s_high = pl_futures(c, price_now, r_2s_high)
+
+    notional = price_now * CONTRACT_SIZE_BBL * float(c)
+    margin_used = float(c) * float(margin_per_contract)
+    leverage_label = f"{(notional / amount) if amount > 0 else 0.0:.2f}× notional/capital"
+
+# UI layout
+sim_left, sim_right = st.columns([1.25, 1])
+
+with sim_left:
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="kicker">Forecast summary (next {horizon_days} trading days)</div>
+            <p class="big">{used_return_pct:+.2f}%</p>
+            <div class="delta">Implied price: ${price_exp:,.2f} (from ${price_now:,.2f})</div>
+            <div class="kicker" style="margin-top:10px;">
+                Daily vol (20d): <b>{daily_vol:.4f}</b> · Horizon σ: <b>{sigma_h:.4f}</b> · P(profit): <b>{p_profit*100:.1f}%</b>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Bands in a clean table
+    bands = pd.DataFrame(
+        {
+            "Scenario": ["Expected", "1σ low", "1σ high", "2σ low", "2σ high"],
+            "Price": [price_exp, price_1s_low, price_1s_high, price_2s_low, price_2s_high],
+            "P/L ($)": [pl_exp, pl_1s_low, pl_1s_high, pl_2s_low, pl_2s_high],
+        }
+    )
+    st.markdown("#### Risk bands (volatility-based)")
+    st.dataframe(
+        bands.style.format({"Price": "${:,.2f}", "P/L ($)": "{:+,.2f}"}),
+        use_container_width=True,
+    )
+
+with sim_right:
+    # Position + margin card
+    if sim_mode == "WTI futures (CL)":
+        margin_status = "OK" if (amount >= margin_used) else "⚠️ Under-margined (capital < margin assumption)"
+        st.markdown(
+            f"""
+            <div class="card">
+                <div class="kicker">Futures position</div>
+                <p class="big">{int(contracts)} contract(s)</p>
+                <div class="delta">Notional: ${notional:,.0f}</div>
+                <div class="kicker" style="margin-top:10px;">
+                    Margin used (assumed): <b>${margin_used:,.0f}</b> · Status: <b>{margin_status}</b><br/>
+                    Leverage proxy: <b>{leverage_label}</b><br/>
+                    Contract size: <b>1,000 barrels</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.caption("Margin varies by broker/exchange and market conditions. This is an assumption for simulation.")
+    else:
+        st.markdown(
+            f"""
+            <div class="card">
+                <div class="kicker">Capital exposure</div>
+                <p class="big">${amount:,.0f}</p>
+                <div class="delta">Assumes return applies to capital directly</div>
+                <div class="kicker" style="margin-top:10px;">
+                    Exposure: <b>${notional:,.0f}</b> · Leverage: <b>{leverage_label}</b>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    # Quick interpretation
+    if pl_exp > 0:
+        st.success("📈 Expected P/L is positive under the selected forecast.")
+    elif pl_exp < 0:
+        st.error("📉 Expected P/L is negative under the selected forecast.")
+    else:
+        st.info("⚪ Expected P/L is near zero under the selected forecast.")
+
+    st.caption("Bands use a normal approximation with σ estimated from 20-day realized volatility (log returns).")
 # ---------------- Position / What-if calculator ----------------
 st.markdown("### 💵 What-if return calculator")
 
