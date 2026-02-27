@@ -13,7 +13,7 @@ from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
 
 # ---------------- Page config ----------------
 st.set_page_config(
-    page_title="WTI AI Dashboard",
+    page_title="BarrelX Dashboard",
     page_icon="🛢️",
     layout="wide",
 )
