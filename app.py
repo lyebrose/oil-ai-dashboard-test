@@ -5,6 +5,7 @@ import numpy as np
 import plotly.express as px
 import requests
 from datetime import datetime, timedelta
+import math
 
 from data import load_wti
 from features import add_technical_features, make_targets, build_model_frame
@@ -239,8 +240,7 @@ h = int(horizon_days)
 sigma_h = daily_vol * np.sqrt(max(h, 1))  # horizon std in log-return space
 
 def norm_cdf(x: float) -> float:
-    # normal CDF using erf (no scipy dependency)
-    return 0.5 * (1.0 + float(np.math.erf(x / np.sqrt(2.0))))
+    return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
 
 # Expected / band returns (log-return model: r ~ N(mu, sigma_h))
 mu = used_logret
