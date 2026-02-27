@@ -47,23 +47,3 @@ def build_model_frame(df: pd.DataFrame) -> pd.DataFrame:
     out = out.dropna()
     return out
 
-def add_participation_ratio(df: pd.DataFrame) -> pd.DataFrame:
-    out = df.copy()
-
-    # Ensure ret_1d exists
-    if "ret_1d" not in out.columns:
-        out["ret_1d"] = np.log(out["Settle"]).diff()
-
-    # If no volume, create empty columns so app doesn't break
-    if "Volume" not in out.columns:
-        out["Volume"] = np.nan
-
-    out["vol_avg_20"] = out["Volume"].rolling(20).mean()
-    out["vol_rel_20"] = out["Volume"] / out["vol_avg_20"]
-
-    denom = out["vol_rel_20"].replace([0, np.inf, -np.inf], np.nan)
-
-    # High ratio = big move on low participation ("thin / flukey" move)
-    out["move_per_participation"] = out["ret_1d"].abs() / denom
-
-    return out
