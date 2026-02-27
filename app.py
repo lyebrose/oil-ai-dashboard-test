@@ -113,6 +113,11 @@ with st.sidebar:
     geo_days = st.selectbox("Geopolitics lookback (days)", [3, 7, 14], index=1)
     geo_max_items = st.selectbox("Max headlines", [6, 8, 10, 12], index=2)
 
+    st.markdown("---")
+    st.markdown("### What-if / Position sizing")
+    use_custom_return = st.checkbox("Use custom predicted return (%)", value=False)
+    
+
 # ---------------- Data build ----------------
 @st.cache_data(show_spinner=False)
 def build_dataset(start_date: str, horizon_days: int) -> pd.DataFrame:
@@ -197,6 +202,54 @@ with c4:
     st.progress(signal_strength)
 
 st.markdown("---")
+# ---------------- Position / What-if calculator ----------------
+st.markdown("### 💵 What-if return calculator")
+
+calc_left, calc_right = st.columns([1.2, 1])
+
+with calc_left:
+    amount = st.number_input(
+        "Amount to invest ($)",
+        min_value=0.0,
+        value=10000.0,
+        step=500.0,
+    )
+
+    if use_custom_return:
+        custom_return = st.number_input(
+            "Predicted return (%)",
+            value=float(pred_pct),
+            step=0.25,
+        )
+        used_return_pct = float(custom_return)
+        source_label = "Custom input"
+    else:
+        used_return_pct = float(pred_pct)
+        source_label = "Model forecast"
+
+    st.caption(f"Return source: **{source_label}**")
+
+with calc_right:
+    projected_profit = amount * (used_return_pct / 100.0)
+    ending_value = amount + projected_profit
+
+    st.markdown(
+        f"""
+        <div class="card">
+            <div class="kicker">Projected outcome (next {horizon_days} trading days)</div>
+            <p class="big">${ending_value:,.2f}</p>
+            <div class="delta">P/L: {projected_profit:+,.2f} &nbsp; • &nbsp; Return: {used_return_pct:+.2f}%</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if used_return_pct > 0:
+        st.success("📈 Positive expected return (based on selected return input).")
+    elif used_return_pct < 0:
+        st.error("📉 Negative expected return (based on selected return input).")
+    else:
+        st.info("⚪ Flat expected return.")
 
 # ---------------- Geopolitics: lightweight headlines + coherent scoring ----------------
 UP_KEYS = [
