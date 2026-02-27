@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 import math
 
 from data import load_wti
-from features import add_technical_features, make_targets, build_model_frame
+from features import add_technical_features, make_targets, build_model_frame, add_participation_ratio
 from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
 
 # ---------------- Page config ----------------
@@ -148,6 +148,7 @@ def build_dataset(start_date: str, horizon_days: int) -> pd.DataFrame:
     df = add_technical_features(df)
     df = make_targets(df, horizon_days=horizon_days)
     df = build_model_frame(df)
+    df = add_participation_ratio(df)
     return df
 
 df = build_dataset(start_date, horizon_days)
@@ -616,6 +617,31 @@ with tab1:
             height=245,
         )
         st.plotly_chart(fig_ret, use_container_width=True)
+
+        st.markdown("### Participation ratio (thin-move detector)")
+
+if "Volume" not in df.columns or df["Volume"].dropna().empty:
+    st.info("Volume isn’t available from the current data source, so the ratio panel is hidden.")
+else:
+    g = df.reset_index()
+    fig_ratio = px.line(
+        g,
+        x="Date",
+        y="move_per_participation",
+        title="|Return| per relative volume (higher = thinner move)",
+    )
+    fig_ratio.update_layout(
+        template="simple_white",
+        paper_bgcolor="#FFFDF6",
+        plot_bgcolor="#FFFDF6",
+        title_font_size=14,
+        xaxis_title="Date",
+        yaxis_title="Ratio",
+        margin=dict(l=10, r=10, t=45, b=10),
+        height=245,
+    )
+    fig_ratio.update_traces(line=dict(width=2))
+    st.plotly_chart(fig_ratio, use_container_width=True)
 
     st.markdown("---")
 
