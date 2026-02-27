@@ -8,13 +8,10 @@ from sklearn.inspection import permutation_importance
 
 
 FEATURE_COLS = [
-    # Technicals
     "ret_1d", "ret_5d", "ret_20d",
     "vol_5d", "vol_20d", "vol_60d",
     "price_over_ma20", "price_over_ma50",
     "drawdown_20d",
-    # GDELT
-    "energy_news_count", "energy_news_tone", "news_spike_ratio",
 ]
 
 
@@ -28,27 +25,26 @@ class BacktestResult:
     importance: pd.DataFrame
 
 
-def walk_forward_backtest(df: pd.DataFrame, start_year=2015) -> BacktestResult:
+def walk_forward_backtest(df: pd.DataFrame, start_year: int = 2018) -> BacktestResult:
     """
     Walk-forward by year:
-      Train up to year-1, test on that year.
+      Train on years < y, test on year == y
     """
-    df = df.copy()
-    df["year"] = df.index.year
+    d = df.copy()
+    d["year"] = d.index.year
 
     preds_all = []
     truth_all = []
 
-    # Keep last trained model for “importance”
     last_model = None
     last_X_test = None
     last_y_test = None
 
-    years = sorted(y for y in df["year"].unique() if y >= start_year)
+    years = sorted(y for y in d["year"].unique() if y >= start_year)
     for y in years:
-        train = df[df["year"] < y]
-        test = df[df["year"] == y]
-        if len(train) < 300 or len(test) < 50:
+        train = d[d["year"] < y]
+        test = d[d["year"] == y]
+        if len(train) < 250 or len(test) < 40:
             continue
 
         X_train = train[FEATURE_COLS]
@@ -77,16 +73,11 @@ def walk_forward_backtest(df: pd.DataFrame, start_year=2015) -> BacktestResult:
 
     mae = float(mean_absolute_error(truth, preds))
     rmse = float(np.sqrt(mean_squared_error(truth, preds)))
-
-    # Direction accuracy on sign
     dir_acc = float(accuracy_score((truth > 0).astype(int), (preds > 0).astype(int)))
 
-    # Permutation importance (on last test fold)
     importance = pd.DataFrame({"feature": FEATURE_COLS, "importance": 0.0})
     if last_model is not None and last_X_test is not None and len(last_X_test) > 200:
-        r = permutation_importance(
-            last_model, last_X_test, last_y_test, n_repeats=10, random_state=42
-        )
+        r = permutation_importance(last_model, last_X_test, last_y_test, n_repeats=10, random_state=42)
         importance = pd.DataFrame({"feature": FEATURE_COLS, "importance": r.importances_mean})
         importance = importance.sort_values("importance", ascending=False)
 
@@ -95,11 +86,10 @@ def walk_forward_backtest(df: pd.DataFrame, start_year=2015) -> BacktestResult:
 
 def train_latest_model(df: pd.DataFrame):
     """
-    Train on all available data and return the model + the latest row prediction.
+    Train on all available data and return the model + latest prediction.
     """
-    train = df.copy()
-    X = train[FEATURE_COLS]
-    y = train["y_week_return"]
+    X = df[FEATURE_COLS]
+    y = df["y_week_return"]
 
     model = HistGradientBoostingRegressor(
         max_depth=3,
@@ -109,6 +99,5 @@ def train_latest_model(df: pd.DataFrame):
     )
     model.fit(X, y)
 
-    latest_X = X.tail(1)
-    latest_pred = float(model.predict(latest_X)[0])
+    latest_pred = float(model.predict(X.tail(1))[0])
     return model, latest_pred

@@ -1,20 +1,20 @@
 # data.py
 import pandas as pd
 import yfinance as yf
-import requests
-from urllib.parse import quote
 
 
-def load_wti(start="2010-01-01") -> pd.DataFrame:
+def load_wti(start: str = "2023-01-01") -> pd.DataFrame:
     """
-    Reliable loader for Streamlit Cloud:
-    1) Stooq CSV (usually stable, no rate limits)
-    2) yfinance fallback (often rate-limited on Streamlit Cloud)
-    Returns: DataFrame with DatetimeIndex and single column 'Settle' (float).
+    Load WTI daily settlement proxy.
+    Streamlit Cloud often rate-limits Yahoo Finance, so we use Stooq first.
+
+    Returns a DataFrame with:
+      - DatetimeIndex
+      - column: 'Settle' (float)
     """
     start_dt = pd.to_datetime(start)
 
-    # 1) Stooq first (recommended on cloud)
+    # 1) Stooq (recommended on Streamlit Cloud)
     try:
         url = "https://stooq.com/q/d/l/?s=cl.f&i=d"
         raw = pd.read_csv(url)  # Date, Open, High, Low, Close, Volume
@@ -29,7 +29,7 @@ def load_wti(start="2010-01-01") -> pd.DataFrame:
     except Exception:
         pass
 
-    # 2) yfinance fallback
+    # 2) yfinance fallback (may rate-limit on cloud)
     try:
         df = yf.download("CL=F", start=start, progress=False)
         if not df.empty and "Close" in df.columns:
@@ -38,7 +38,9 @@ def load_wti(start="2010-01-01") -> pd.DataFrame:
             out = out.sort_index()
             out["Settle"] = pd.to_numeric(out["Settle"], errors="coerce")
             out = out.dropna()
-            return out[out.index >= start_dt]
+            out = out[out.index >= start_dt]
+            if not out.empty:
+                return out
     except Exception:
         pass
 
