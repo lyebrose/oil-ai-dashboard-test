@@ -1,0 +1,7 @@
+[theme]
+base="light"
+primaryColor="#1E4DB7"                  # deep blue
+backgroundColor="#FBF6EC"               # cream
+secondaryBackgroundColor="#FFFDF6"      # softer cream
+textColor="#102A43"
+font="sans serif"
