@@ -56,7 +56,7 @@ def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
     return out
 
 
-def load_wti(start: str = "2023-01-01") -> pd.DataFrame:
+def load_wti(start: str = "2010-01-01") -> pd.DataFrame:
     """
     Returns: DataFrame with DatetimeIndex and one column 'Settle' (float).
     Tries multiple sources to survive Streamlit Cloud network/rate limits.
