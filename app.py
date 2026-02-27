@@ -17,27 +17,17 @@ st.set_page_config(
     layout="wide",
 )
 
-# ---------------- CSS for sleek blue + cream ----------------
+# ---------------- CSS (sleek blue + cream) ----------------
 st.markdown(
     """
 <style>
-/* Cream background consistency */
-.stApp {
-    background: #FBF6EC;
-}
-
-/* Reduce top padding */
-.block-container {
-    padding-top: 1.2rem;
-}
+.stApp { background: #FBF6EC; }
+.block-container { padding-top: 1.1rem; padding-bottom: 1.2rem; }
 
 /* Headings */
-h1, h2, h3, h4 {
-    color: #0B1F44;
-    letter-spacing: -0.2px;
-}
+h1, h2, h3, h4 { color: #0B1F44; letter-spacing: -0.2px; }
 
-/* A “card” look */
+/* Cards */
 .card {
     background: #FFFDF6;
     border: 1px solid rgba(16,42,67,0.10);
@@ -45,54 +35,33 @@ h1, h2, h3, h4 {
     padding: 16px 16px;
     box-shadow: 0 6px 18px rgba(16,42,67,0.07);
 }
+.kicker { color: rgba(16,42,67,0.70); font-size: 0.85rem; margin-bottom: 4px; }
+.big { font-size: 1.65rem; font-weight: 800; color: #0B1F44; margin: 0; }
+.delta { font-size: 0.95rem; margin-top: 6px; font-weight: 650; color: rgba(11,31,68,0.90); }
 
-/* Small label */
-.kicker {
-    color: rgba(16,42,67,0.65);
-    font-size: 0.85rem;
-    margin-bottom: 4px;
-}
-
-/* Big number */
-.big {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: #0B1F44;
-    margin: 0;
-}
-
-/* Delta */
-.delta {
-    font-size: 0.95rem;
-    margin-top: 4px;
-    font-weight: 600;
-}
-
-/* Up / Down pill */
+/* Pills */
 .pill {
     display: inline-block;
     padding: 6px 10px;
     border-radius: 999px;
-    font-weight: 700;
-    font-size: 0.85rem;
-    letter-spacing: 0.2px;
+    font-weight: 800;
+    font-size: 0.83rem;
+    letter-spacing: 0.3px;
 }
 .pill-up {
-    background: rgba(22, 163, 74, 0.12);
-    color: #166534;
-    border: 1px solid rgba(22, 163, 74, 0.25);
+    background: rgba(30, 77, 183, 0.10);
+    color: #1E4DB7;
+    border: 1px solid rgba(30, 77, 183, 0.25);
 }
 .pill-down {
-    background: rgba(220, 38, 38, 0.10);
-    color: #7F1D1D;
-    border: 1px solid rgba(220, 38, 38, 0.22);
+    background: rgba(180, 83, 9, 0.10);
+    color: #9A3412;
+    border: 1px solid rgba(180, 83, 9, 0.22);
 }
-
-/* Blue accent divider */
-hr {
-    border: none;
-    border-top: 1px solid rgba(30,77,183,0.18);
-    margin: 1.0rem 0;
+.pill-neutral {
+    background: rgba(16,42,67,0.08);
+    color: rgba(16,42,67,0.85);
+    border: 1px solid rgba(16,42,67,0.15);
 }
 
 /* Sidebar */
@@ -108,13 +77,11 @@ section[data-testid="stSidebar"] {
     border-radius: 12px !important;
     border: 0 !important;
     padding: 10px 14px !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
 }
-.stButton button:hover {
-    background: #173E93 !important;
-}
+.stButton button:hover { background: #173E93 !important; }
 
-/* Dataframe styling */
+/* Dataframe */
 div[data-testid="stDataFrame"] {
     border-radius: 16px;
     overflow: hidden;
@@ -143,6 +110,8 @@ with st.sidebar:
     st.markdown("### Display")
     show_feature_table = st.checkbox("Show latest feature table", value=True)
     show_importance = st.checkbox("Show feature importance", value=True)
+    geo_days = st.selectbox("Geopolitics lookback (days)", [3, 7, 14], index=1)
+    geo_max_items = st.selectbox("Max headlines", [6, 8, 10, 12], index=2)
 
 # ---------------- Data build ----------------
 @st.cache_data(show_spinner=False)
@@ -162,11 +131,16 @@ pred_dir = "UP" if latest_pred > 0 else "DOWN"
 
 # ---------------- Top KPIs ----------------
 latest_price = float(df["Settle"].iloc[-1])
+
 week_change = np.nan
 if len(df) > 6:
     week_change = float((df["Settle"].iloc[-1] / df["Settle"].iloc[-6] - 1) * 100)
 
 risk = float(df["vol_20d"].iloc[-1]) if "vol_20d" in df.columns else np.nan
+vol_label = "High" if risk >= 0.03 else "Normal"
+
+# Signal strength proxy (based on forecast magnitude, capped)
+signal_strength = min(abs(pred_pct) / 3.0, 1.0)
 
 pill_class = "pill-up" if pred_dir == "UP" else "pill-down"
 pill_text = f"<span class='pill {pill_class}'>SIGNAL: {pred_dir}</span>"
@@ -177,7 +151,7 @@ with c1:
     st.markdown(
         f"""
         <div class="card">
-            <div class="kicker">WTI settlement (proxy)</div>
+            <div class="kicker">WTI (daily proxy)</div>
             <p class="big">${latest_price:,.2f}</p>
             <div class="delta">1-week change: {week_change:+.2f}%</div>
         </div>
@@ -189,7 +163,7 @@ with c2:
     st.markdown(
         f"""
         <div class="card">
-            <div class="kicker">1-week forecast (return)</div>
+            <div class="kicker">Forecast (next {horizon_days} trading days)</div>
             <p class="big">{pred_pct:+.2f}%</p>
             <div class="delta">{pill_text}</div>
         </div>
@@ -198,7 +172,6 @@ with c2:
     )
 
 with c3:
-    vol_label = "High" if risk >= 0.03 else "Normal"
     st.markdown(
         f"""
         <div class="card">
@@ -211,36 +184,80 @@ with c3:
     )
 
 with c4:
-    # quick confidence proxy: scale predicted magnitude (cap at 3%)
-    conf = min(abs(pred_pct) / 3.0, 1.0)
     st.markdown(
         f"""
         <div class="card">
             <div class="kicker">Signal strength (proxy)</div>
-            <p class="big">{conf*100:.0f}%</p>
+            <p class="big">{signal_strength*100:.0f}%</p>
             <div class="delta">Based on |forecast| (capped)</div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    st.progress(conf)
+    st.progress(signal_strength)
 
-st.markdown("<hr/>", unsafe_allow_html=True)
-# ---------- Geopolitical events: lightweight headline fetch + heuristic impact ----------
+st.markdown("---")
+
+# ---------------- Geopolitics: lightweight headlines + coherent scoring ----------------
+UP_KEYS = [
+    "attack", "strike", "drone", "missile", "explosion",
+    "pipeline", "refinery", "terminal", "shutdown", "outage",
+    "red sea", "houthi", "strait of hormuz", "tanker", "shipping",
+    "sanction", "embargo", "escalat", "war", "conflict",
+    "opec cuts", "cut output", "production cut", "supply disruption",
+]
+DOWN_KEYS = [
+    "ceasefire", "truce", "deal", "agreement", "talks", "diplom",
+    "raise output", "increase output", "production hike", "opec+ hikes",
+    "release reserves", "spr release",
+    "demand slump", "recession", "weak demand", "slowdown",
+]
+DRIVER_BUCKETS = {
+    "Supply disruptions (infrastructure/shipping)": [
+        "pipeline", "refinery", "terminal", "shutdown", "outage", "tanker", "shipping", "red sea", "strait of hormuz"
+    ],
+    "Conflict escalation / security risk": ["war", "conflict", "attack", "strike", "drone", "missile", "explosion", "escalat"],
+    "Sanctions & policy": ["sanction", "embargo"],
+    "OPEC policy": ["opec", "opec+", "production cut", "cut output", "increase output", "raise output", "production hike"],
+    "Demand macro": ["recession", "weak demand", "slowdown", "demand slump"],
+}
+
+def classify_impact(title: str):
+    t = (title or "").lower()
+    up_hits = sum(1 for k in UP_KEYS if k in t)
+    down_hits = sum(1 for k in DOWN_KEYS if k in t)
+
+    if up_hits == 0 and down_hits == 0:
+        return ("Unclear", 0.45, "Headline is relevant, but impact depends on details.")
+    if up_hits > down_hits:
+        conf = min(0.55 + 0.08 * (up_hits - down_hits), 0.85)
+        return ("Upward pressure", conf, "More cues for tighter supply / risk premium.")
+    if down_hits > up_hits:
+        conf = min(0.55 + 0.08 * (down_hits - up_hits), 0.85)
+        return ("Downward pressure", conf, "More cues for easing risk / higher supply / weaker demand.")
+    return ("Mixed", 0.55, "Contains both tightening and easing cues.")
+
+def extract_drivers(headlines):
+    counts = {k: 0 for k in DRIVER_BUCKETS.keys()}
+    for h in headlines:
+        t = (h.get("title") or "").lower()
+        for bucket, keys in DRIVER_BUCKETS.items():
+            if any(k in t for k in keys):
+                counts[bucket] += 1
+    top = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+    return [(k, v) for k, v in top if v > 0][:4]
 
 @st.cache_data(show_spinner=False, ttl=60*30)  # cache for 30 minutes
 def fetch_geo_headlines(days: int = 7, max_items: int = 10):
     """
     Fetch recent geopolitics/oil-related headlines from GDELT (lightweight).
-    Returns a list of dicts: {title, url, date, source, tone}
+    Returns list of dicts: title, url, date, source.
     """
     end = datetime.utcnow()
     start = end - timedelta(days=days)
-
     start_s = start.strftime("%Y%m%d%H%M%S")
     end_s = end.strftime("%Y%m%d%H%M%S")
 
-    # Keep query fairly broad but relevant
     query = (
         '(oil OR "crude oil" OR WTI OR Brent OR OPEC OR refinery OR pipeline OR tanker) '
         'AND (sanctions OR war OR conflict OR "Middle East" OR Russia OR Iran OR "Red Sea" '
@@ -264,66 +281,74 @@ def fetch_geo_headlines(days: int = 7, max_items: int = 10):
     for a in articles:
         out.append(
             {
-                "title": a.get("title", "").strip(),
-                "url": a.get("url", ""),
-                "date": a.get("seendate", ""),
-                "source": a.get("sourceCountry", "") or a.get("sourceCollection", ""),
-                "tone": a.get("tone", None),
+                "title": (a.get("title") or "").strip(),
+                "url": a.get("url") or "",
+                "date": a.get("seendate") or "",
+                "source": a.get("sourceCountry") or a.get("sourceCollection") or "",
             }
         )
     return out
 
-
-def impact_heuristic(title: str):
+def geo_summary(headlines):
     """
-    Very simple explainable rules:
-    returns (direction, confidence_0to1, reason)
+    Build:
+      - net risk score [-100..100] (positive = upward pressure)
+      - counts
+      - coherent takeaway
     """
-    t = (title or "").lower()
+    if not headlines:
+        return 0.0, {"up": 0, "down": 0, "mixed": 0, "unclear": 0}, "No headlines loaded."
 
-    # Supply disruption / transport chokepoints: usually upward pressure
-    up_keywords = [
-        "attack", "strike", "drone", "missile", "explosion",
-        "pipeline", "refinery", "terminal", "shutdown", "outage",
-        "red sea", "houthi", "strait of hormuz", "tanker",
-        "sanction", "embargo", "escalat", "war", "conflict",
-        "opec cuts", "cut output", "production cut"
-    ]
+    score = 0.0
+    counts = {"up": 0, "down": 0, "mixed": 0, "unclear": 0}
 
-    # Supply increases / de-escalation: usually downward pressure
-    down_keywords = [
-        "ceasefire", "truce", "deal", "agreement", "talks",
-        "raise output", "increase output", "production hike",
-        "opec+ hikes", "release reserves", "spr release",
-        "demand slump", "recession", "weak demand"
-    ]
+    for h in headlines:
+        direction, conf, _ = classify_impact(h.get("title", ""))
+        if direction == "Upward pressure":
+            counts["up"] += 1
+            score += conf
+        elif direction == "Downward pressure":
+            counts["down"] += 1
+            score -= conf
+        elif direction == "Mixed":
+            counts["mixed"] += 1
+            score += 0.0
+        else:
+            counts["unclear"] += 1
+            score += 0.0
 
-    up = any(k in t for k in up_keywords)
-    down = any(k in t for k in down_keywords)
+    # Normalize roughly to [-100..100]
+    denom = max(len(headlines) * 0.85, 1)
+    net = float(np.clip((score / denom) * 100, -100, 100))
 
-    if up and not down:
-        return ("Upward pressure", 0.75, "Signals higher supply risk / disruptions / tighter supply.")
-    if down and not up:
-        return ("Downward pressure", 0.70, "Signals easing risk or higher supply / weaker demand.")
-    if up and down:
-        return ("Mixed / unclear", 0.55, "Contains both tightening and easing cues; impact depends on details.")
-    return ("Unclear", 0.45, "Not enough signal from headline alone.")
+    # Coherent takeaway text
+    if net >= 25:
+        takeaway = "Geopolitical tape is skewed toward **supply risk / tighter supply** → upward pressure bias."
+    elif net <= -25:
+        takeaway = "Tape is skewed toward **risk easing / higher supply / weaker demand** → downward pressure bias."
+    else:
+        takeaway = "Geopolitical tape is **mixed** → likely noise-driven; price may be more technical/macro-led."
+
+    return net, counts, takeaway
+
+def pill_for_geo(net_score: float):
+    if net_score >= 25:
+        return ("pill-up", "RISK BIAS: UP")
+    if net_score <= -25:
+        return ("pill-down", "RISK BIAS: DOWN")
+    return ("pill-neutral", "RISK BIAS: MIXED")
 
 # ---------------- Tabs ----------------
 tab1, tab2, tab3 = st.tabs(["📈 Overview", "🧪 Backtest", "🧠 Model Inputs"])
 
 # ---------- Tab 1: Overview ----------
 with tab1:
-    left, right = st.columns([1.6, 1])
+    # Top charts row: remove empty space by making the right column fully stacked
+    left, right = st.columns([1.55, 1])
 
     with left:
         st.markdown("### Price")
-        fig_price = px.line(
-            df.reset_index(),
-            x="Date",
-            y="Settle",
-            title="WTI Price (daily)",
-        )
+        fig_price = px.line(df.reset_index(), x="Date", y="Settle", title="WTI Price (daily)")
         fig_price.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
@@ -332,6 +357,7 @@ with tab1:
             xaxis_title="Date",
             yaxis_title="Price ($)",
             margin=dict(l=10, r=10, t=55, b=10),
+            height=520,
         )
         fig_price.update_traces(line=dict(width=2))
         st.plotly_chart(fig_price, use_container_width=True)
@@ -340,75 +366,121 @@ with tab1:
         st.markdown("### Volatility & Returns")
         g = df.reset_index()
 
-        fig_vol = px.line(g, x="Date", y="vol_20d", title="20-day volatility (log-return std)")
+        fig_vol = px.line(g, x="Date", y="vol_20d", title="20-day volatility (std)")
         fig_vol.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
             plot_bgcolor="#FFFDF6",
-            title_font_size=16,
+            title_font_size=14,
             xaxis_title="Date",
-            yaxis_title="Vol (std)",
-            margin=dict(l=10, r=10, t=50, b=10),
+            yaxis_title="Vol",
+            margin=dict(l=10, r=10, t=45, b=10),
+            height=245,
         )
+        fig_vol.update_traces(line=dict(width=2))
         st.plotly_chart(fig_vol, use_container_width=True)
 
-        fig_ret = px.bar(g.tail(90), x="Date", y="ret_1d", title="Daily log returns (last 90 days)")
+        fig_ret = px.bar(g.tail(120), x="Date", y="ret_1d", title="Daily log returns (last ~6 months)")
         fig_ret.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
             plot_bgcolor="#FFFDF6",
-            title_font_size=16,
+            title_font_size=14,
             xaxis_title="Date",
             yaxis_title="Log return",
-            margin=dict(l=10, r=10, t=50, b=10),
+            margin=dict(l=10, r=10, t=45, b=10),
+            height=245,
         )
         st.plotly_chart(fig_ret, use_container_width=True)
-        st.markdown("<hr/>", unsafe_allow_html=True)
 
-bottom_left, bottom_right = st.columns([1.35, 1])
+    st.markdown("---")
 
-with bottom_left:
-    st.markdown("### 🌍 Geopolitical events & potential oil impact")
-    st.caption("Recent headlines + a simple heuristic about supply risk and price pressure.")
+    # Bottom row: geopolitics (left) + summary/drivers (right)
+    geo_col, context_col = st.columns([1.35, 1])
 
-    try:
-        headlines = fetch_geo_headlines(days=7, max_items=10)
+    with geo_col:
+        st.markdown("### 🌍 Geopolitical events")
+        st.caption("Recent headlines + an explainable heuristic about oil price pressure.")
+
+        try:
+            headlines = fetch_geo_headlines(days=geo_days, max_items=geo_max_items)
+        except Exception:
+            headlines = []
 
         if not headlines:
-            st.info("No recent geopolitics/oil headlines returned right now.")
+            st.info("Couldn’t load headlines right now. (API/network). Try again later.")
         else:
+            # Render each headline compactly
             for h in headlines:
-                direction, conf, reason = impact_heuristic(h["title"])
-
-                # Pretty status line
+                direction, conf, reason = classify_impact(h.get("title", ""))
                 if direction == "Upward pressure":
-                    st.markdown(f"**🟦 {direction}** — {conf*100:.0f}%")
+                    badge = "<span class='pill pill-up'>UPWARD</span>"
                 elif direction == "Downward pressure":
-                    st.markdown(f"**🟫 {direction}** — {conf*100:.0f}%")
+                    badge = "<span class='pill pill-down'>DOWNWARD</span>"
+                elif direction == "Mixed":
+                    badge = "<span class='pill pill-neutral'>MIXED</span>"
                 else:
-                    st.markdown(f"**⚪ {direction}** — {conf*100:.0f}%")
+                    badge = "<span class='pill pill-neutral'>UNCLEAR</span>"
 
-                # Headline with link
-                if h["url"]:
-                    st.markdown(f"- [{h['title']}]({h['url']})")
-                else:
-                    st.markdown(f"- {h['title']}")
+                title = h.get("title", "").strip()
+                url = h.get("url", "")
+                source = h.get("source", "")
+                conf_txt = f"{conf*100:.0f}%"
 
-                # Small reason line
-                st.caption(reason)
-                st.markdown("")
+                st.markdown(
+                    f"""
+                    <div class="card" style="padding: 12px 12px; margin-bottom: 10px;">
+                        <div class="kicker">{badge} &nbsp; Confidence: <b>{conf_txt}</b> &nbsp; · &nbsp; {source}</div>
+                        <div style="font-weight: 800; color:#0B1F44; line-height: 1.25;">
+                            {f'<a href="{url}" target="_blank" style="text-decoration:none; color:#0B1F44;">{title}</a>' if url else title}
+                        </div>
+                        <div class="kicker" style="margin-top:6px;">{reason}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
-    except Exception:
-        st.warning("Couldn’t load headlines right now (network/API). Try again later.")
+    with context_col:
+        st.markdown("### 🧭 Today’s context")
+        st.caption("A coherent summary built from the headlines (not a guarantee).")
 
-with bottom_right:
-    st.markdown("### 🧭 How to interpret this panel")
-    st.write(
-        "- Oil is **very sensitive to supply shocks** (pipelines, refineries, shipping chokepoints).\n"
-        "- **Sanctions / conflict escalation** often creates *risk premium* → upward pressure.\n"
-        "- **De-escalation / supply increases / demand weakness** often reduce that premium.\n"
-        "- Headlines are noisy—use this as **context**, not a guarantee."
-    )
+        net, counts, takeaway = geo_summary(headlines if "headlines" in locals() else [])
+        pill_cls, pill_lbl = pill_for_geo(net)
+
+        st.markdown(
+            f"""
+            <div class="card">
+                <div class="kicker">Geopolitical risk score</div>
+                <p class="big">{net:+.0f}</p>
+                <div class="delta"><span class="pill {pill_cls}">{pill_lbl}</span></div>
+                <div class="kicker" style="margin-top:10px;">
+                    Up: <b>{counts['up']}</b> · Down: <b>{counts['down']}</b> · Mixed: <b>{counts['mixed']}</b> · Unclear: <b>{counts['unclear']}</b>
+                </div>
+                <div style="margin-top:10px; color: rgba(11,31,68,0.92); font-weight:650;">
+                    {takeaway}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # Driver breakdown
+        drivers = extract_drivers(headlines if "headlines" in locals() else [])
+        st.markdown("#### Top drivers detected")
+        if not drivers:
+            st.write("No dominant driver category detected from the current headlines.")
+        else:
+            for name, ct in drivers:
+                st.markdown(f"- **{name}** — {ct} headline(s)")
+
+        # Actionable interpretation
+        st.markdown("#### How this could affect oil")
+        st.write(
+            "- **Supply risk (shipping chokepoints, outages, attacks)** tends to add a *risk premium* → upward pressure.\n"
+            "- **Sanctions / escalation** can tighten expected supply or increase uncertainty.\n"
+            "- **De-escalation / higher output / demand weakness** can reduce risk premium → downward pressure.\n"
+            "- If geopolitics is mixed, price action is often more **technical/macro-led** short-term."
+        )
 
 # ---------- Tab 2: Backtest ----------
 with tab2:
@@ -438,6 +510,7 @@ with tab2:
         yaxis_title="Log return",
         margin=dict(l=10, r=10, t=55, b=10),
         legend_title_text="",
+        height=520,
     )
     st.plotly_chart(fig_bt, use_container_width=True)
 
@@ -454,8 +527,9 @@ with tab3:
         latest = df[FEATURE_COLS].tail(1).T.rename(columns={df.index[-1]: "latest"})
         st.dataframe(latest, use_container_width=True)
 
-    st.markdown("### Notes")
+    st.markdown("### Model notes")
     st.write(
-        "- This UI is styled with custom CSS + a Streamlit theme (blue + cream).\n"
-        "- Next upgrade: add geopolitics safely via weekly aggregated signals (so it stays fast)."
+        "- Forecast horizon is **next trading week** (5 or 10 trading days).\n"
+        "- Signal strength shown is a **proxy** based on forecast magnitude.\n"
+        "- Geopolitics panel uses **recent headlines** + a transparent heuristic to summarize possible pressure."
     )
