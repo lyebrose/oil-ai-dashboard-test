@@ -4,4 +4,5 @@ numpy
 yfinance
 scikit-learn
 plotly
+feedparser
 requests
