@@ -57,28 +57,24 @@ def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
 
 
 def load_wti(start: str = "2023-01-01") -> pd.DataFrame:
-    """
-    Returns: DataFrame with DatetimeIndex and one column 'Settle' (float).
-    Tries multiple sources to survive Streamlit Cloud network/rate limits.
-    """
     start_dt = pd.to_datetime(start)
 
-    # 1) FRED (most reliable)
-    try:
-        return _load_fred_wti(start_dt)
-    except Exception:
-        pass
-
-    # 2) Stooq
+    # 1) Stooq — real-time, no lag
     try:
         return _load_stooq(start_dt)
     except Exception:
         pass
 
-    # 3) yfinance
+    # 2) yfinance — good but sometimes rate-limited on Streamlit Cloud
     try:
         return _load_yfinance(start_dt)
     except Exception:
         pass
 
-    raise RuntimeError("Could not load WTI data from FRED, Stooq, or yfinance.")
+    # 3) FRED — reliable but ~2 week lag, last resort
+    try:
+        return _load_fred_wti(start_dt)
+    except Exception:
+        pass
+
+    raise RuntimeError("Could not load WTI data from Stooq, yfinance, or FRED.")
