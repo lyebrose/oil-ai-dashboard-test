@@ -472,31 +472,42 @@ def extract_drivers(headlines):
     return [(k, v) for k, v in top if v > 0][:4]
 
 @st.cache_data(show_spinner=False, ttl=60*30)  # cache for 30 minutes
+@st.cache_data(show_spinner=False, ttl=60*30)
 def fetch_geo_headlines(days: int = 7, max_items: int = 10):
     """
-    Fetch recent geopolitics/oil-related headlines from GDELT.
-    Uses timespan instead of startdatetime/enddatetime for reliability.
+    Fetch recent geopolitics/oil headlines from GDELT using start/end datetime.
+    More reliable than timespan parameter.
     """
+    end = datetime.utcnow()
+    start = end - timedelta(days=days)
+
+    start_s = start.strftime("%Y%m%d%H%M%S")
+    end_s = end.strftime("%Y%m%d%H%M%S")
+
+    # SIMPLER query (less likely to break)
     query = (
-        '(oil OR "crude oil" OR WTI OR Brent OR OPEC OR refinery OR pipeline OR tanker) '
-        'AND (sanctions OR war OR conflict OR "Middle East" OR Russia OR Iran OR "Red Sea" '
-        'OR "Strait of Hormuz" OR Venezuela OR Libya OR Nigeria)'
+        '(oil OR "crude oil" OR OPEC OR refinery OR pipeline OR tanker) '
+        'AND (war OR conflict OR sanctions OR "Middle East" OR Russia OR Iran)'
     )
 
-    # Use a GDELT timespan parameter
-    # e.g. "7d" for 7 days
     url = (
         "https://api.gdeltproject.org/api/v2/doc/doc"
         f"?query={requests.utils.quote(query)}"
-        f"&mode=artlist&format=json"
+        f"&mode=artlist"
+        f"&format=json"
         f"&maxrecords={max_items}"
-        f"&timespan={days}d"
-        "&sort=hybridrel"
+        f"&startdatetime={start_s}"
+        f"&enddatetime={end_s}"
+        f"&sort=datedesc"
     )
 
-    r = requests.get(url, timeout=12)
-    r.raise_for_status()
-    j = r.json()
+    try:
+        r = requests.get(url, timeout=10)
+        r.raise_for_status()
+        j = r.json()
+    except Exception as e:
+        print("GDELT error:", e)
+        return []
 
     articles = j.get("articles", []) or []
 
@@ -507,9 +518,10 @@ def fetch_geo_headlines(days: int = 7, max_items: int = 10):
                 "title": (a.get("title") or "").strip(),
                 "url": a.get("url") or "",
                 "date": a.get("seendate") or "",
-                "source": a.get("sourceCountry") or a.get("sourceCollection") or "",
+                "source": a.get("sourceCountry") or "",
             }
         )
+
     return out
 
 def geo_summary(headlines):
