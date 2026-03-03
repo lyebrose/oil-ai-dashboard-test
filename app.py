@@ -651,35 +651,101 @@ with tab1:
         st.caption(f"Data last updated: **{last_updated}** · Refreshes automatically every 24 hours")
 
     with right:
-        st.markdown("### Volatility & Returns")
-        g = df.reset_index()
+        st.markdown("### 📅 1-week price forecast")
 
-        fig_vol = px.line(g, x="Date", y="vol_20d", title="20-day volatility (std)")
-        fig_vol.update_layout(
+        # Build forecast dates (next 5 or 10 trading days)
+        last_date = df.index[-1]
+        forecast_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=horizon_days)
+
+        # Build price path from log return forecast, spread across horizon
+        # Daily log return = total log return / horizon
+        daily_log_step = latest_pred / horizon_days
+        forecast_prices = [price_now * np.exp(daily_log_step * i) for i in range(1, horizon_days + 1)]
+
+        # Volatility cone (daily vol scaled to each step)
+        daily_vol = float(df["vol_20d"].iloc[-1]) if "vol_20d" in df.columns and pd.notna(df["vol_20d"].iloc[-1]) else 0.0
+        sigma_steps = [daily_vol * np.sqrt(i) for i in range(1, horizon_days + 1)]
+
+        upper_1 = [p * np.exp(s) for p, s in zip(forecast_prices, sigma_steps)]
+        lower_1 = [p * np.exp(-s) for p, s in zip(forecast_prices, sigma_steps)]
+        upper_2 = [p * np.exp(2 * s) for p, s in zip(forecast_prices, sigma_steps)]
+        lower_2 = [p * np.exp(-2 * s) for p, s in zip(forecast_prices, sigma_steps)]
+
+        # Last N days of actual price for context
+        history_tail = df["Settle"].tail(20).reset_index()
+        history_tail.columns = ["Date", "Price"]
+
+        fig_fwd = px.line(
+            history_tail,
+            x="Date",
+            y="Price",
+            labels={"Price": "Price ($)"},
+            title=f"Price forecast — next {horizon_days} trading days",
+        )
+        fig_fwd.update_traces(line=dict(color="#1E4DB7", width=2), name="Historical", showlegend=True)
+
+        # Anchor point: connect history to forecast
+        anchor_dates = [last_date] + list(forecast_dates)
+        anchor_prices = [price_now] + forecast_prices
+
+        # Expected path
+        fig_fwd.add_scatter(
+            x=anchor_dates, y=anchor_prices,
+            mode="lines+markers",
+            line=dict(color="#F59E0B", width=2, dash="dash"),
+            marker=dict(size=5),
+            name="Expected path",
+        )
+
+        # 1σ band
+        fig_fwd.add_scatter(
+            x=list(forecast_dates) + list(forecast_dates[::-1]),
+            y=upper_1 + lower_1[::-1],
+            fill="toself",
+            fillcolor="rgba(30,77,183,0.12)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="1σ range",
+            hoverinfo="skip",
+        )
+
+        # 2σ band
+        fig_fwd.add_scatter(
+            x=list(forecast_dates) + list(forecast_dates[::-1]),
+            y=upper_2 + lower_2[::-1],
+            fill="toself",
+            fillcolor="rgba(30,77,183,0.06)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="2σ range",
+            hoverinfo="skip",
+        )
+
+        # Vertical line at today
+        fig_fwd.add_vline(
+            x=last_date,
+            line_dash="dot",
+            line_color="rgba(11,31,68,0.3)",
+            annotation_text="  Today",
+            annotation_font_color="#0B1F44",
+        )
+
+        fig_fwd.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
             plot_bgcolor="#FFFDF6",
             title_font_size=14,
             xaxis_title="Date",
-            yaxis_title="Vol",
+            yaxis_title="Price ($)",
             margin=dict(l=10, r=10, t=45, b=10),
-            height=245,
+            height=520,
+            hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
         )
-        fig_vol.update_traces(line=dict(width=2))
-        st.plotly_chart(fig_vol, use_container_width=True)
 
-        fig_ret = px.bar(g.tail(120), x="Date", y="ret_1d", title="Daily log returns (last ~6 months)")
-        fig_ret.update_layout(
-            template="simple_white",
-            paper_bgcolor="#FFFDF6",
-            plot_bgcolor="#FFFDF6",
-            title_font_size=14,
-            xaxis_title="Date",
-            yaxis_title="Log return",
-            margin=dict(l=10, r=10, t=45, b=10),
-            height=245,
+        st.plotly_chart(fig_fwd, use_container_width=True)
+        st.caption(
+            f"Dashed line = expected path · Bands show 1σ and 2σ volatility cone · "
+            f"Based on 20-day realized vol ({daily_vol:.4f} daily)"
         )
-        st.plotly_chart(fig_ret, use_container_width=True)
 
     st.markdown("---")
 
