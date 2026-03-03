@@ -658,11 +658,10 @@ with tab1:
         forecast_dates = pd.bdate_range(start=last_date + pd.Timedelta(days=1), periods=horizon_days)
 
         # Build price path from log return forecast, spread across horizon
-        # Daily log return = total log return / horizon
         daily_log_step = latest_pred / horizon_days
         forecast_prices = [price_now * np.exp(daily_log_step * i) for i in range(1, horizon_days + 1)]
 
-        # Volatility cone (daily vol scaled to each step)
+        # Volatility cone
         daily_vol = float(df["vol_20d"].iloc[-1]) if "vol_20d" in df.columns and pd.notna(df["vol_20d"].iloc[-1]) else 0.0
         sigma_steps = [daily_vol * np.sqrt(i) for i in range(1, horizon_days + 1)]
 
@@ -671,7 +670,7 @@ with tab1:
         upper_2 = [p * np.exp(2 * s) for p, s in zip(forecast_prices, sigma_steps)]
         lower_2 = [p * np.exp(-2 * s) for p, s in zip(forecast_prices, sigma_steps)]
 
-        # Last N days of actual price for context
+        # Last 20 days of actual price for context
         history_tail = df["Settle"].tail(20).reset_index()
         history_tail.columns = ["Date", "Price"]
 
@@ -719,9 +718,9 @@ with tab1:
             hoverinfo="skip",
         )
 
-        # Vertical line at today
+        # Vertical line at today — convert to string to avoid Plotly/pandas Timestamp bug
         fig_fwd.add_vline(
-            x=last_date,
+            x=str(last_date),
             line_dash="dot",
             line_color="rgba(11,31,68,0.3)",
             annotation_text="  Today",
