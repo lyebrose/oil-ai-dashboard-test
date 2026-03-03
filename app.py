@@ -471,47 +471,70 @@ def extract_drivers(headlines):
     top = sorted(counts.items(), key=lambda x: x[1], reverse=True)
     return [(k, v) for k, v in top if v > 0][:4]
 
-@st.cache_data(show_spinner=False, ttl=60*30)  # cache for 30 minutes
+@st.cache_data(show_spinner=False, ttl=60*30)
 def fetch_geo_headlines(days: int = 7, max_items: int = 10):
     """
-    Fetch recent geopolitics/oil-related headlines from GDELT (lightweight).
+    Fetch recent geopolitics/oil-related headlines from GDELT.
     Returns list of dicts: title, url, date, source.
     """
-    end = datetime.utcnow()
-    start = end - timedelta(days=days)
-    start_s = start.strftime("%Y%m%d%H%M%S")
-    end_s = end.strftime("%Y%m%d%H%M%S")
+    # Use timespan instead of startdatetime/enddatetime — much more reliable
+    timespan = f"{days}d"
 
+    # Simpler query — GDELT ANDs space-separated terms, ORs items in parentheses
+    # Keep it focused; overly complex queries return zero results
     query = (
-        '(oil OR "crude oil" OR WTI OR Brent OR OPEC OR refinery OR pipeline OR tanker) '
-        'AND (sanctions OR war OR conflict OR "Middle East" OR Russia OR Iran OR "Red Sea" '
-        'OR "Strait of Hormuz" OR Venezuela OR Libya OR Nigeria)'
+        "(oil OR crude OR WTI OR Brent OR OPEC) "
+        "(sanctions OR war OR conflict OR attack OR pipeline OR "
+        "Iran OR Russia OR \"Middle East\" OR \"Red Sea\" OR OPEC)"
     )
 
     url = (
         "https://api.gdeltproject.org/api/v2/doc/doc"
         f"?query={requests.utils.quote(query)}"
-        f"&mode=artlist&format=json"
-        f"&startdatetime={start_s}&enddatetime={end_s}"
-        f"&maxrecords={max_items}&sort=hybridrel"
+        f"&mode=artlist"
+        f"&format=json"
+        f"&timespan={timespan}"
+        f"&maxrecords={max_items}"
+        f"&sort=datedesc"  # valid values: datedesc, dateasc, rel
     )
 
-    r = requests.get(url, timeout=12)
-    r.raise_for_status()
-    j = r.json()
-    articles = j.get("articles", []) or []
+    try:
+        r = requests.get(url, timeout=15)
+        r.raise_for_status()
+        
+        # GDELT sometimes returns empty body or non-JSON on error
+        if not r.text.strip():
+            st.warning("GDELT returned an empty response.")
+            return []
+        
+        j = r.json()
+        articles = j.get("articles") or []
 
-    out = []
-    for a in articles:
-        out.append(
-            {
-                "title": (a.get("title") or "").strip(),
+        out = []
+        for a in articles:
+            title = (a.get("title") or "").strip()
+            if not title:
+                continue
+            out.append({
+                "title": title,
                 "url": a.get("url") or "",
                 "date": a.get("seendate") or "",
-                "source": a.get("sourceCountry") or a.get("sourceCollection") or "",
-            }
-        )
-    return out
+                "source": a.get("domain") or a.get("sourcecountry") or "",
+            })
+        return out
+
+    except requests.exceptions.Timeout:
+        st.warning("GDELT request timed out. Try again later.")
+        return []
+    except requests.exceptions.HTTPError as e:
+        st.warning(f"GDELT HTTP error: {e}")
+        return []
+    except ValueError:
+        st.warning("GDELT returned malformed JSON.")
+        return []
+    except Exception as e:
+        st.warning(f"GDELT fetch failed: {e}")
+        return []
 
 def geo_summary(headlines):
     """
