@@ -2,7 +2,9 @@
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
-from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.neural_network import MLPRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 from sklearn.metrics import mean_absolute_error, mean_squared_error, accuracy_score
 from sklearn.inspection import permutation_importance
 
@@ -13,6 +15,24 @@ FEATURE_COLS = [
     "price_over_ma20", "price_over_ma50",
     "drawdown_20d",
 ]
+
+
+def _make_pipeline() -> Pipeline:
+    mlp = MLPRegressor(
+        hidden_layer_sizes=(128, 64),
+        activation="relu",
+        solver="adam",
+        alpha=1e-3,
+        learning_rate="adaptive",
+        learning_rate_init=1e-3,
+        max_iter=500,
+        early_stopping=True,
+        validation_fraction=0.1,
+        n_iter_no_change=20,
+        random_state=42,
+        verbose=False,
+    )
+    return Pipeline([("scaler", StandardScaler()), ("mlp", mlp)])
 
 
 @dataclass
@@ -26,17 +46,13 @@ class BacktestResult:
 
 
 def walk_forward_backtest(df: pd.DataFrame, start_year: int = 2018) -> BacktestResult:
-    """
-    Walk-forward by year:
-      Train on years < y, test on year == y
-    """
     d = df.copy()
     d["year"] = d.index.year
 
     preds_all = []
     truth_all = []
 
-    last_model = None
+    last_pipe = None
     last_X_test = None
     last_y_test = None
 
@@ -52,19 +68,14 @@ def walk_forward_backtest(df: pd.DataFrame, start_year: int = 2018) -> BacktestR
         X_test = test[FEATURE_COLS]
         y_test = test["y_week_return"]
 
-        model = HistGradientBoostingRegressor(
-            max_depth=3,
-            learning_rate=0.05,
-            max_iter=400,
-            random_state=42,
-        )
-        model.fit(X_train, y_train)
+        pipe = _make_pipeline()
+        pipe.fit(X_train, y_train)
 
-        pred = pd.Series(model.predict(X_test), index=X_test.index)
+        pred = pd.Series(pipe.predict(X_test), index=X_test.index)
         preds_all.append(pred)
         truth_all.append(y_test)
 
-        last_model = model
+        last_pipe = pipe
         last_X_test = X_test
         last_y_test = y_test
 
@@ -76,8 +87,8 @@ def walk_forward_backtest(df: pd.DataFrame, start_year: int = 2018) -> BacktestR
     dir_acc = float(accuracy_score((truth > 0).astype(int), (preds > 0).astype(int)))
 
     importance = pd.DataFrame({"feature": FEATURE_COLS, "importance": 0.0})
-    if last_model is not None and last_X_test is not None and len(last_X_test) > 200:
-        r = permutation_importance(last_model, last_X_test, last_y_test, n_repeats=10, random_state=42)
+    if last_pipe is not None and last_X_test is not None and len(last_X_test) > 20:
+        r = permutation_importance(last_pipe, last_X_test, last_y_test, n_repeats=10, random_state=42)
         importance = pd.DataFrame({"feature": FEATURE_COLS, "importance": r.importances_mean})
         importance = importance.sort_values("importance", ascending=False)
 
@@ -85,19 +96,11 @@ def walk_forward_backtest(df: pd.DataFrame, start_year: int = 2018) -> BacktestR
 
 
 def train_latest_model(df: pd.DataFrame):
-    """
-    Train on all available data and return the model + latest prediction.
-    """
     X = df[FEATURE_COLS]
     y = df["y_week_return"]
 
-    model = HistGradientBoostingRegressor(
-        max_depth=3,
-        learning_rate=0.05,
-        max_iter=500,
-        random_state=42,
-    )
-    model.fit(X, y)
+    pipe = _make_pipeline()
+    pipe.fit(X, y)
 
-    latest_pred = float(model.predict(X.tail(1))[0])
-    return model, latest_pred
+    latest_pred = float(pipe.predict(X.tail(1))[0])
+    return pipe, latest_pred
