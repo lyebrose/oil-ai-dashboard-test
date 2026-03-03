@@ -719,12 +719,24 @@ with tab1:
         )
 
         # Vertical line at today — convert to string to avoid Plotly/pandas Timestamp bug
-        fig_fwd.add_vline(
+        # Vertical line at today — using shape instead of add_vline due to Plotly bug
+        fig_fwd.add_shape(
+            type="line",
+            x0=str(last_date),
+            x1=str(last_date),
+            y0=0,
+            y1=1,
+            yref="paper",
+            line=dict(dash="dot", color="rgba(11,31,68,0.3)"),
+        )
+        fig_fwd.add_annotation(
             x=str(last_date),
-            line_dash="dot",
-            line_color="rgba(11,31,68,0.3)",
-            annotation_text="  Today",
-            annotation_font_color="#0B1F44",
+            y=1,
+            yref="paper",
+            text="Today",
+            showarrow=False,
+            font=dict(color="#0B1F44"),
+            xanchor="left",
         )
 
         fig_fwd.update_layout(
