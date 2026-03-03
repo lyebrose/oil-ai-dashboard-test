@@ -6,11 +6,22 @@ import plotly.express as px
 import requests
 from datetime import datetime, timedelta
 import math
+import feedparser
 
 from data import load_wti
 from features import add_technical_features, make_targets, build_model_frame
 from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
+RSS_FEEDS = [
+    "https://feeds.reuters.com/reuters/businessNews",
+    "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "https://www.ft.com/rss/home",  # FT sometimes blocks, skip if needed
+]
 
+OIL_KEYWORDS = [
+    "oil", "crude", "wti", "brent", "opec", "energy", "petroleum",
+    "refinery", "pipeline", "tanker", "iran", "russia", "saudi",
+    "middle east", "red sea", "houthi", "sanctions", "ukraine",
+]
 # ---------------- Page config ----------------
 st.set_page_config(
     page_title="BarrelX Dashboard",
@@ -474,67 +485,56 @@ def extract_drivers(headlines):
 @st.cache_data(show_spinner=False, ttl=60*30)
 def fetch_geo_headlines(days: int = 7, max_items: int = 10):
     """
-    Fetch recent geopolitics/oil-related headlines from GDELT.
-    Returns list of dicts: title, url, date, source.
+    Fetch oil/geopolitics headlines from Reuters + BBC RSS.
+    No API key required.
     """
-    # Use timespan instead of startdatetime/enddatetime — much more reliable
-    timespan = f"{days}d"
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    out = []
 
-    # Simpler query — GDELT ANDs space-separated terms, ORs items in parentheses
-    # Keep it focused; overly complex queries return zero results
-    query = (
-        "(oil OR crude OR WTI OR Brent OR OPEC) "
-        "(sanctions OR war OR conflict OR attack OR pipeline OR "
-        "Iran OR Russia OR \"Middle East\" OR \"Red Sea\" OR OPEC)"
-    )
+    for feed_url in RSS_FEEDS:
+        try:
+            feed = feedparser.parse(feed_url)
+            for entry in feed.entries:
+                title = (entry.get("title") or "").strip()
+                if not title:
+                    continue
 
-    url = (
-        "https://api.gdeltproject.org/api/v2/doc/doc"
-        f"?query={requests.utils.quote(query)}"
-        f"&mode=artlist"
-        f"&format=json"
-        f"&timespan={timespan}"
-        f"&maxrecords={max_items}"
-        f"&sort=datedesc"  # valid values: datedesc, dateasc, rel
-    )
+                # Filter to oil/geo relevant headlines only
+                if not any(kw in title.lower() for kw in OIL_KEYWORDS):
+                    continue
 
-    try:
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        
-        # GDELT sometimes returns empty body or non-JSON on error
-        if not r.text.strip():
-            st.warning("GDELT returned an empty response.")
-            return []
-        
-        j = r.json()
-        articles = j.get("articles") or []
+                # Parse date if available
+                published = entry.get("published_parsed") or entry.get("updated_parsed")
+                if published:
+                    pub_dt = datetime(*published[:6])
+                    if pub_dt < cutoff:
+                        continue
+                    date_str = pub_dt.strftime("%Y-%m-%d %H:%M")
+                else:
+                    date_str = ""
 
-        out = []
-        for a in articles:
-            title = (a.get("title") or "").strip()
-            if not title:
-                continue
-            out.append({
-                "title": title,
-                "url": a.get("url") or "",
-                "date": a.get("seendate") or "",
-                "source": a.get("domain") or a.get("sourcecountry") or "",
-            })
-        return out
+                out.append({
+                    "title": title,
+                    "url": entry.get("link") or "",
+                    "date": date_str,
+                    "source": feed.feed.get("title") or feed_url,
+                })
 
-    except requests.exceptions.Timeout:
-        st.warning("GDELT request timed out. Try again later.")
-        return []
-    except requests.exceptions.HTTPError as e:
-        st.warning(f"GDELT HTTP error: {e}")
-        return []
-    except ValueError:
-        st.warning("GDELT returned malformed JSON.")
-        return []
-    except Exception as e:
-        st.warning(f"GDELT fetch failed: {e}")
-        return []
+        except Exception as e:
+            st.warning(f"RSS fetch failed for {feed_url}: {e}")
+            continue
+
+    # Deduplicate by title, sort newest first, cap at max_items
+    seen = set()
+    deduped = []
+    for h in sorted(out, key=lambda x: x["date"], reverse=True):
+        if h["title"] not in seen:
+            seen.add(h["title"])
+            deduped.append(h)
+        if len(deduped) >= max_items:
+            break
+
+    return deduped
 
 def geo_summary(headlines):
     """
