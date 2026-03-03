@@ -129,7 +129,14 @@ with st.sidebar:
     st.markdown("### What-if / Position sizing")
     use_custom_return = st.checkbox("Use custom predicted return (%)", value=False)
     st.markdown("---")
-st.markdown("### Trade simulator")
+    st.markdown("### Trade simulator")
+
+    st.markdown("---")
+    last_updated = "loading..."
+    st.caption(f"Data last updated: **{last_updated}**")
+    if st.button("🔄 Refresh data"):
+        st.cache_data.clear()
+        st.rerun()
 
 sim_mode = st.selectbox(
     "Mode",
@@ -153,15 +160,15 @@ if sim_mode == "WTI futures (CL)":
     
 
 # ---------------- Data build ----------------
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner=False, ttl=60*60*24)  # refresh every 24 hours
 def build_dataset(start_date: str, horizon_days: int) -> pd.DataFrame:
     df = load_wti(start=start_date)
     df = add_technical_features(df)
     df = make_targets(df, horizon_days=horizon_days)
     df = build_model_frame(df)
-    return df
+    return df, datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
-df = build_dataset(start_date, horizon_days)
+df, last_updated = build_dataset(start_date, horizon_days)
 
 # ---------------- Model training (latest) ----------------
 model, latest_pred = train_latest_model(df)
@@ -595,7 +602,37 @@ with tab1:
 
     with left:
         st.markdown("### Price")
-        fig_price = px.line(df.reset_index(), x="Date", y="Settle", title="WTI Price (daily)")
+
+        # Resample to ensure one row per calendar day (fills weekends with last known price)
+        df_plot = df.reset_index().copy()
+
+        # Add 30-day rolling average for context
+        df_plot["ma_30"] = df_plot["Settle"].rolling(30).mean()
+
+        fig_price = px.line(
+            df_plot,
+            x="Date",
+            y=["Settle", "ma_30"],
+            title="WTI Crude Oil — Daily Settlement Price",
+            labels={"value": "Price ($)", "variable": ""},
+            color_discrete_map={"Settle": "#1E4DB7", "ma_30": "#F59E0B"},
+        )
+
+        # Rename legend labels
+        fig_price.for_each_trace(lambda t: t.update(
+            name="WTI Price" if t.name == "Settle" else "30-day MA"
+        ))
+
+        # Horizontal line at latest price
+        fig_price.add_hline(
+            y=latest_price,
+            line_dash="dot",
+            line_color="rgba(11,31,68,0.35)",
+            annotation_text=f"  Latest: ${latest_price:,.2f}",
+            annotation_position="top left",
+            annotation_font_color="#0B1F44",
+        )
+
         fig_price.update_layout(
             template="simple_white",
             paper_bgcolor="#FFFDF6",
@@ -605,9 +642,13 @@ with tab1:
             yaxis_title="Price ($)",
             margin=dict(l=10, r=10, t=55, b=10),
             height=520,
+            legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
+            hovermode="x unified",
         )
         fig_price.update_traces(line=dict(width=2))
+
         st.plotly_chart(fig_price, use_container_width=True)
+        st.caption(f"Data last updated: **{last_updated}** · Refreshes automatically every 24 hours")
 
     with right:
         st.markdown("### Volatility & Returns")
