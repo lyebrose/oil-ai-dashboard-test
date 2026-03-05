@@ -106,10 +106,7 @@ div[data-testid="stDataFrame"] {
 
 # ---------------- Header ----------------
 st.markdown("## 🛢️ BarrelX - An AI Powered WTI Market Dashboard")
-st.markdown(
-    "<div class='kicker'>1-week horizon • Technical model • Educational decision support (not financial advice)</div>",
-    unsafe_allow_html=True,
-)
+
 
 # ---------------- Sidebar controls ----------------
 with st.sidebar:
