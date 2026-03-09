@@ -142,6 +142,31 @@ div[data-testid="stDataFrame"] {
 .js-plotly-plot .plot-container {
     background-color: #0A0F1F !important;
 }
+/* ---------- Global text override (orange) ---------- */
+body, .stApp, .block-container, div, p, span, label {
+    color: #FFA54C !important;   /* warm orange */
+}
+
+/* Headings */
+h1, h2, h3, h4 {
+    color: #FFB86C !important;   /* slightly brighter orange */
+}
+
+/* Sidebar text */
+section[data-testid="stSidebar"] * {
+    color: #FFB86C !important;
+}
+
+/* Card text */
+.card, .card * {
+    color: #FFA54C !important;
+}
+
+/* Pills text stays the same EXCEPT neutral ones */
+.pill-neutral {
+    color: #FFB86C !important;
+}
+
 </style>
 """,
     unsafe_allow_html=True,
