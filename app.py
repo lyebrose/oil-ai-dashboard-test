@@ -146,6 +146,10 @@ div[data-testid="stDataFrame"] {
 h1, h2, h3, h4 {
     color: #D7E9FF !important;   /* same light blue as inside cards */
 }
+/* ---------- Smaller text outside cards (darker light blue) ---------- */
+p, span, label, .kicker, .delta, div:not(.card):not(.card *):not(.pill):not(.pill *) {
+    color: #A9C7FF !important;   /* same muted light blue as inside cards */
+}
 
 </style>
 """,
