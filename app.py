@@ -33,7 +33,7 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-.stApp { background: #FBF6EC; }
+.stApp { background: #1b1b2e; }
 .block-container { padding-top: 1.1rem; padding-bottom: 1.2rem; }
 
 /* Headings */
