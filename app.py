@@ -41,7 +41,7 @@ h1, h2, h3, h4 { color: #0B1F44; letter-spacing: -0.2px; }
 
 /* Cards */
 .card {
-    background: #c0defc;
+    background: #c9e4ff;
     border: 1px solid rgba(16,42,67,0.10);
     border-radius: 18px;
     padding: 16px 16px;
