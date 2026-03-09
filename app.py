@@ -150,6 +150,12 @@ h1, h2, h3, h4 {
 p, span, label, .kicker, .delta, div:not(.card):not(.card *):not(.pill):not(.pill *) {
     color: #A9C7FF !important;   /* same muted light blue as inside cards */
 }
+/* ---------- Top toolbar (white bar) ---------- */
+header[data-testid="stHeader"] {
+    background-color: #0A0F1F !important;   /* your dark background */
+    color: #D7E9FF !important;              /* optional: text/icons color */
+    border-bottom: 1px solid rgba(120,160,255,0.15);
+}
 
 </style>
 """,
