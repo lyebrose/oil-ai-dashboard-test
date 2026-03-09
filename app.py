@@ -78,7 +78,7 @@ h1, h2, h3, h4 { color: #0B1F44; letter-spacing: -0.2px; }
 
 /* Sidebar */
 section[data-testid="stSidebar"] {
-    background: #FFFDF6;
+    background: #cfeaff;
     border-right: 1px solid rgba(16,42,67,0.08);
 }
 
