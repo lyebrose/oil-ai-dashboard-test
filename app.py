@@ -142,6 +142,11 @@ div[data-testid="stDataFrame"] {
 .js-plotly-plot .plot-container {
     background-color: #0A0F1F !important;
 }
+/* ---------- Make section headers light blue (match card text) ---------- */
+h1, h2, h3, h4 {
+    color: #D7E9FF !important;   /* same light blue as inside cards */
+}
+
 </style>
 """,
     unsafe_allow_html=True,
