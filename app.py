@@ -690,17 +690,37 @@ with tab1:
         )
 
         fig_price.update_layout(
-            template="simple_white",
-            paper_bgcolor="#FFFDF6",
-            plot_bgcolor="#FFFDF6",
-            title_font_size=18,
-            xaxis_title="Date",
-            yaxis_title="Price ($)",
+            paper_bgcolor="#0A0F1F",
+            plot_bgcolor="#0A0F1F",
+            font=dict(color="#D7E9FF"),
+        
+            xaxis=dict(
+                color="#A9C7FF",
+                gridcolor="rgba(255,255,255,0.08)",
+                zerolinecolor="rgba(255,255,255,0.12)",
+            ),
+            yaxis=dict(
+                color="#A9C7FF",
+                gridcolor="rgba(255,255,255,0.08)",
+                zerolinecolor="rgba(255,255,255,0.12)",
+            ),
+        
+            legend=dict(
+                font=dict(color="#D7E9FF"),
+                bgcolor="rgba(0,0,0,0)",
+            ),
+        
+            hoverlabel=dict(
+                bgcolor="#111A2E",
+                bordercolor="#1E4DB7",
+                font=dict(color="#D7E9FF"),
+            ),
+        
             margin=dict(l=10, r=10, t=55, b=10),
             height=520,
-            legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="left", x=0),
             hovermode="x unified",
         )
+
         fig_price.update_traces(line=dict(width=2))
 
         st.plotly_chart(fig_price, use_container_width=True)
