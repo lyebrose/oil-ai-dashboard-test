@@ -35,7 +35,7 @@ st.markdown(
 <style>
 /* ---------- App Background ---------- */
 .stApp { 
-    background: #0A0F1F;   /* deep black‑blue */
+    background: #384959;   /* deep slate-blue */
 }
 
 /* Container spacing */
@@ -46,21 +46,21 @@ st.markdown(
 
 /* ---------- Headings ---------- */
 h1, h2, h3, h4 { 
-    color: #D7E9FF;        /* light blue */
+    color: #BDDDFC;        /* pale ice-blue */
     letter-spacing: -0.2px; 
 }
 
 /* ---------- Cards ---------- */
 .card {
-    background: #111A2E;   /* dark navy */
-    border: 1px solid rgba(120,160,255,0.18);
+    background: #6A89A7;   /* steel-blue */
+    border: 1px solid rgba(189,221,252,0.25);
     border-radius: 18px;
     padding: 16px 16px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
 }
 
 .kicker { 
-    color: #8FAEEB;        /* muted light blue */
+    color: #BDDDFC;        /* pale ice-blue */
     font-size: 0.85rem; 
     margin-bottom: 4px; 
 }
@@ -68,7 +68,7 @@ h1, h2, h3, h4 {
 .big { 
     font-size: 1.65rem; 
     font-weight: 800; 
-    color: #E8F1FF;        /* bright light blue */
+    color: #FFFFFF;        /* white for contrast */
     margin: 0; 
 }
 
@@ -76,7 +76,7 @@ h1, h2, h3, h4 {
     font-size: 0.95rem; 
     margin-top: 6px; 
     font-weight: 650; 
-    color: #A9C7FF; 
+    color: #88BDF2;        /* bright sky-blue */
 }
 
 /* ---------- Pills ---------- */
@@ -90,9 +90,9 @@ h1, h2, h3, h4 {
 }
 
 .pill-up {
-    background: rgba(80,150,255,0.15);
-    color: #6BA8FF;
-    border: 1px solid rgba(80,150,255,0.35);
+    background: rgba(136,189,242,0.20);
+    color: #88BDF2;
+    border: 1px solid rgba(136,189,242,0.45);
 }
 
 .pill-down {
@@ -102,55 +102,48 @@ h1, h2, h3, h4 {
 }
 
 .pill-neutral {
-    background: rgba(180,200,255,0.10);
-    color: #C8D9FF;
-    border: 1px solid rgba(180,200,255,0.20);
+    background: rgba(189,221,252,0.15);
+    color: #BDDDFC;
+    border: 1px solid rgba(189,221,252,0.25);
 }
 
 /* ---------- Sidebar ---------- */
 section[data-testid="stSidebar"] {
-    background: #0F1628;   /* dark navy */
-    border-right: 1px solid rgba(120,160,255,0.15);
+    background: #6A89A7;
+    border-right: 1px solid rgba(189,221,252,0.25);
 }
 
 section[data-testid="stSidebar"] * {
-    color: #D7E9FF !important;
+    color: #BDDDFC !important;
 }
 
 /* ---------- Buttons ---------- */
 .stButton button {
-    background: #1E4DB7 !important;  /* bright blue */
-    color: white !important;
+    background: #88BDF2 !important;
+    color: #384959 !important;
     border-radius: 12px !important;
     border: 0 !important;
     padding: 10px 14px !important;
     font-weight: 800 !important;
 }
 .stButton button:hover { 
-    background: #163A8F !important; 
+    background: #6A89A7 !important; 
 }
 
 /* ---------- DataFrame ---------- */
 div[data-testid="stDataFrame"] {
     border-radius: 16px;
     overflow: hidden;
-    border: 1px solid rgba(120,160,255,0.18);
+    border: 1px solid rgba(189,221,252,0.25);
 }
 
 /* ---------- Plotly Background ---------- */
 .js-plotly-plot .plotly, 
 .js-plotly-plot .plot-container {
-    background-color: #0A0F1F !important;
+    background-color: #384959 !important;
 }
-/* ---------- Make section headers light blue (match card text) ---------- */
-h1, h2, h3, h4 {
-    color: #D7E9FF !important;   /* same light blue as inside cards */
-}
-/* ---------- Smaller text outside cards (darker light blue) ---------- */
-p, span, label, .kicker, .delta, div:not(.card):not(.card *):not(.pill):not(.pill *) {
-    color: #A9C7FF !important;   /* same muted light blue as inside cards */
-}
-/* ---------- Top toolbar (white bar) ---------- */
+
+/* ---------- Top toolbar ---------- */
 header[data-testid="stHeader"] {
     background-color: transparent !important;
     box-shadow: none !important;
