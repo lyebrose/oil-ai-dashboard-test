@@ -35,7 +35,7 @@ st.markdown(
 <style>
 /* ---------- App Background ---------- */
 .stApp { 
-    background: #384959;   /* deep slate-blue */
+    background: #F7F9FC;   /* soft cream */
 }
 
 /* Container spacing */
@@ -46,21 +46,22 @@ st.markdown(
 
 /* ---------- Headings ---------- */
 h1, h2, h3, h4 { 
-    color: #BDDDFC;        /* pale ice-blue */
+    color: #1E3A5F;        /* deep blue */
     letter-spacing: -0.2px; 
+    font-weight: 800;
 }
 
 /* ---------- Cards ---------- */
 .card {
-    background: #6A89A7;   /* steel-blue */
-    border: 1px solid rgba(189,221,252,0.25);
+    background: #FFFFFF;   /* clean white card */
+    border: 1px solid rgba(30,58,95,0.15);
     border-radius: 18px;
     padding: 16px 16px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
 .kicker { 
-    color: #BDDDFC;        /* pale ice-blue */
+    color: #6A89A7;        /* muted steel-blue */
     font-size: 0.85rem; 
     margin-bottom: 4px; 
 }
@@ -68,7 +69,7 @@ h1, h2, h3, h4 {
 .big { 
     font-size: 1.65rem; 
     font-weight: 800; 
-    color: #FFFFFF;        /* white for contrast */
+    color: #1E3A5F;        /* deep blue */
     margin: 0; 
 }
 
@@ -76,7 +77,7 @@ h1, h2, h3, h4 {
     font-size: 0.95rem; 
     margin-top: 6px; 
     font-weight: 650; 
-    color: #88BDF2;        /* bright sky-blue */
+    color: #88BDF2;        /* bright light blue */
 }
 
 /* ---------- Pills ---------- */
@@ -91,36 +92,36 @@ h1, h2, h3, h4 {
 
 .pill-up {
     background: rgba(136,189,242,0.20);
-    color: #88BDF2;
+    color: #1E3A5F;
     border: 1px solid rgba(136,189,242,0.45);
 }
 
 .pill-down {
     background: rgba(255,120,80,0.15);
-    color: #FF8A6B;
+    color: #9A3412;
     border: 1px solid rgba(255,120,80,0.35);
 }
 
 .pill-neutral {
-    background: rgba(189,221,252,0.15);
-    color: #BDDDFC;
-    border: 1px solid rgba(189,221,252,0.25);
+    background: rgba(30,58,95,0.08);
+    color: #1E3A5F;
+    border: 1px solid rgba(30,58,95,0.15);
 }
 
 /* ---------- Sidebar ---------- */
 section[data-testid="stSidebar"] {
-    background: #6A89A7;
-    border-right: 1px solid rgba(189,221,252,0.25);
+    background: #E8F1FA;   /* pale light blue */
+    border-right: 1px solid rgba(30,58,95,0.12);
 }
 
 section[data-testid="stSidebar"] * {
-    color: #BDDDFC !important;
+    color: #1E3A5F !important;
 }
 
 /* ---------- Buttons ---------- */
 .stButton button {
-    background: #88BDF2 !important;
-    color: #384959 !important;
+    background: #88BDF2 !important;  /* bright light blue */
+    color: #1E3A5F !important;
     border-radius: 12px !important;
     border: 0 !important;
     padding: 10px 14px !important;
@@ -128,24 +129,25 @@ section[data-testid="stSidebar"] * {
 }
 .stButton button:hover { 
     background: #6A89A7 !important; 
+    color: white !important;
 }
 
 /* ---------- DataFrame ---------- */
 div[data-testid="stDataFrame"] {
     border-radius: 16px;
     overflow: hidden;
-    border: 1px solid rgba(189,221,252,0.25);
+    border: 1px solid rgba(30,58,95,0.12);
 }
 
 /* ---------- Plotly Background ---------- */
 .js-plotly-plot .plotly, 
 .js-plotly-plot .plot-container {
-    background-color: #384959 !important;
+    background-color: #F7F9FC !important; /* match cream background */
 }
 
 /* ---------- Top toolbar ---------- */
 header[data-testid="stHeader"] {
-    background-color: transparent !important;
+    background-color: #F7F9FC !important;
     box-shadow: none !important;
 }
 
