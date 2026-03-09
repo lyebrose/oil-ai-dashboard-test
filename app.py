@@ -33,25 +33,53 @@ st.set_page_config(
 st.markdown(
     """
 <style>
-.stApp { background: #112d4a; }
-.block-container { padding-top: 1.1rem; padding-bottom: 1.2rem; }
+/* ---------- App Background ---------- */
+.stApp { 
+    background: #0A0F1F;   /* deep black‑blue */
+}
 
-/* Headings */
-h1, h2, h3, h4 { color: #0B1F44; letter-spacing: -0.2px; }
+/* Container spacing */
+.block-container { 
+    padding-top: 1.1rem; 
+    padding-bottom: 1.2rem; 
+}
 
-/* Cards */
+/* ---------- Headings ---------- */
+h1, h2, h3, h4 { 
+    color: #D7E9FF;        /* light blue */
+    letter-spacing: -0.2px; 
+}
+
+/* ---------- Cards ---------- */
 .card {
-    background: #c9e4ff;
-    border: 1px solid rgba(16,42,67,0.10);
+    background: #111A2E;   /* dark navy */
+    border: 1px solid rgba(120,160,255,0.18);
     border-radius: 18px;
     padding: 16px 16px;
-    box-shadow: 0 6px 18px rgba(16,42,67,0.07);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
 }
-.kicker { color: rgba(16,42,67,0.70); font-size: 0.85rem; margin-bottom: 4px; }
-.big { font-size: 1.65rem; font-weight: 800; color: #0B1F44; margin: 0; }
-.delta { font-size: 0.95rem; margin-top: 6px; font-weight: 650; color: rgba(11,31,68,0.90); }
 
-/* Pills */
+.kicker { 
+    color: #8FAEEB;        /* muted light blue */
+    font-size: 0.85rem; 
+    margin-bottom: 4px; 
+}
+
+.big { 
+    font-size: 1.65rem; 
+    font-weight: 800; 
+    color: #E8F1FF;        /* bright light blue */
+    margin: 0; 
+}
+
+.delta { 
+    font-size: 0.95rem; 
+    margin-top: 6px; 
+    font-weight: 650; 
+    color: #A9C7FF; 
+}
+
+/* ---------- Pills ---------- */
 .pill {
     display: inline-block;
     padding: 6px 10px;
@@ -60,49 +88,65 @@ h1, h2, h3, h4 { color: #0B1F44; letter-spacing: -0.2px; }
     font-size: 0.83rem;
     letter-spacing: 0.3px;
 }
+
 .pill-up {
-    background: rgba(30, 77, 183, 0.10);
-    color: #1E4DB7;
-    border: 1px solid rgba(30, 77, 183, 0.25);
+    background: rgba(80,150,255,0.15);
+    color: #6BA8FF;
+    border: 1px solid rgba(80,150,255,0.35);
 }
+
 .pill-down {
-    background: rgba(180, 83, 9, 0.10);
-    color: #9A3412;
-    border: 1px solid rgba(180, 83, 9, 0.22);
+    background: rgba(255,120,80,0.15);
+    color: #FF8A6B;
+    border: 1px solid rgba(255,120,80,0.35);
 }
+
 .pill-neutral {
-    background: rgba(16,42,67,0.08);
-    color: rgba(16,42,67,0.85);
-    border: 1px solid rgba(16,42,67,0.15);
+    background: rgba(180,200,255,0.10);
+    color: #C8D9FF;
+    border: 1px solid rgba(180,200,255,0.20);
 }
 
-/* Sidebar */
+/* ---------- Sidebar ---------- */
 section[data-testid="stSidebar"] {
-    background: #cfeaff;
-    border-right: 1px solid rgba(16,42,67,0.08);
+    background: #0F1628;   /* dark navy */
+    border-right: 1px solid rgba(120,160,255,0.15);
 }
 
-/* Buttons */
+section[data-testid="stSidebar"] * {
+    color: #D7E9FF !important;
+}
+
+/* ---------- Buttons ---------- */
 .stButton button {
-    background: #1E4DB7 !important;
+    background: #1E4DB7 !important;  /* bright blue */
     color: white !important;
     border-radius: 12px !important;
     border: 0 !important;
     padding: 10px 14px !important;
     font-weight: 800 !important;
 }
-.stButton button:hover { background: #173E93 !important; }
+.stButton button:hover { 
+    background: #163A8F !important; 
+}
 
-/* Dataframe */
+/* ---------- DataFrame ---------- */
 div[data-testid="stDataFrame"] {
     border-radius: 16px;
     overflow: hidden;
-    border: 1px solid rgba(16,42,67,0.10);
+    border: 1px solid rgba(120,160,255,0.18);
+}
+
+/* ---------- Plotly Background ---------- */
+.js-plotly-plot .plotly, 
+.js-plotly-plot .plot-container {
+    background-color: #0A0F1F !important;
 }
 </style>
 """,
     unsafe_allow_html=True,
 )
+
 
 # ---------------- Header ----------------
 st.markdown("## 🛢️ BarrelX - An AI Powered WTI Market Dashboard")
