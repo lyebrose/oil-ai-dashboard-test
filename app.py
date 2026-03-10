@@ -397,6 +397,7 @@ with tab1:
         fig_price.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot["ma_30"],  name="30-day MA", line=dict(color="#38BDF8", width=1.5, dash="dot")))
         fig_price.add_hline(y=latest_price, line_dash="dot", line_color="rgba(249,115,22,0.55)", annotation_text=f"  ${latest_price:,.2f}", annotation_position="top left", annotation_font_color="#F97316")
         apply_layout(fig_price, title="Daily settlement price - dotted orange = latest close", height=480)
+        fig_price.update_yaxes(rangemode="normal", range=[df_plot["Settle"].min() * 0.93, df_plot["Settle"].max() * 1.04])
         st.plotly_chart(fig_price, use_container_width=True)
         st.caption(f"Last updated: **{last_updated}** - Auto-refreshes every 24 h")
 
