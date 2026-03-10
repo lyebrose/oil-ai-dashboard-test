@@ -31,7 +31,11 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 *, *::before, *::after { box-sizing: border-box; }
 html, body, .stApp { background: #EEF4FB !important; font-family: 'DM Sans', sans-serif; color: #0F2A4A; }
-.block-container { padding-top: 1.2rem !important; padding-bottom: 2rem !important; max-width: 1400px; }
+.block-container {
+    padding-top: 3rem !important;
+    padding-bottom: 2rem !important;
+    max-width: 1400px;
+}
 h1, h2, h3, h4 { font-family: 'DM Sans', sans-serif; color: #0F2A4A; font-weight: 800; letter-spacing: -0.4px; }
 .card { background: #FFFFFF; border: 1.5px solid #C8DCF0; border-radius: 16px; padding: 18px 20px; box-shadow: 0 2px 12px rgba(37,99,235,0.07), 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 4px; }
 .card-accent { border-left: 4px solid #38BDF8; padding-left: 16px; }
