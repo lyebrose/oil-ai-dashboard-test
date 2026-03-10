@@ -420,15 +420,15 @@ with tab1:
         anchor_prices = [price_now] + forecast_prices
 
         fig_fwd = go.Figure()
-        fig_fwd.add_trace(go.Scatter(x=list(forecast_dates)+list(forecast_dates[::-1]), y=upper_2+lower_2[::-1], fill="toself", fillcolor="rgba(37,99,235,0.06)", line=dict(color="rgba(0,0,0,0)"), name="2sigma range", hoverinfo="skip"))
-        fig_fwd.add_trace(go.Scatter(x=list(forecast_dates)+list(forecast_dates[::-1]), y=upper_1+lower_1[::-1], fill="toself", fillcolor="rgba(37,99,235,0.13)", line=dict(color="rgba(0,0,0,0)"), name="1sigma range", hoverinfo="skip"))
+        fig_fwd.add_trace(go.Scatter(x=list(forecast_dates)+list(forecast_dates[::-1]), y=upper_2+lower_2[::-1], fill="toself", fillcolor="rgba(37,99,235,0.06)", line=dict(color="rgba(0,0,0,0)"), name="2σ range", hoverinfo="skip"))
+        fig_fwd.add_trace(go.Scatter(x=list(forecast_dates)+list(forecast_dates[::-1]), y=upper_1+lower_1[::-1], fill="toself", fillcolor="rgba(37,99,235,0.13)", line=dict(color="rgba(0,0,0,0)"), name="1σ range", hoverinfo="skip"))
         fig_fwd.add_trace(go.Scatter(x=history_tail["Date"], y=history_tail["Price"], name="Historical", line=dict(color="#2563EB", width=2)))
         fig_fwd.add_trace(go.Scatter(x=anchor_dates, y=anchor_prices, name="Expected path", mode="lines+markers", line=dict(color="#F97316", width=2, dash="dash"), marker=dict(size=5, color="#F97316", line=dict(color="#FFFFFF", width=1.5))))
         fig_fwd.add_shape(type="line", x0=str(last_date), x1=str(last_date), y0=0, y1=1, yref="paper", line=dict(dash="dot", color="rgba(107,141,173,0.5)", width=1.5))
         fig_fwd.add_annotation(x=str(last_date), y=0.97, yref="paper", text="Today", showarrow=False, font=dict(color="#6B8DAD", size=11, family="DM Sans"), xanchor="left", bgcolor="rgba(238,244,251,0.85)", bordercolor="#C8DCF0", borderwidth=1, borderpad=3)
         apply_layout(fig_fwd, title=f"Forecast cone - {horizon_days}-day horizon - orange = expected path", height=480)
         st.plotly_chart(fig_fwd, use_container_width=True)
-        st.caption(f"1sigma / 2sigma volatility cone - Daily sigma: {daily_vol:.4f} - P(profit): {p_profit*100:.1f}%")
+        st.caption(f"1σ / 2σvolatility cone - Daily σ: {daily_vol:.4f} - P(profit): {p_profit*100:.1f}%")
 
     st.markdown("---")
     section_header("🧮 Trade Simulator")
