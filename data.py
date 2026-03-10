@@ -30,7 +30,7 @@ def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
         raw.columns = raw.columns.get_level_values(0)
 
     df = raw[["Close"]].rename(columns={"Close": "Settle"})
-    df.index = pd.to_datetime(df.index).normalize()
+    df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
     df = df.dropna()
 
     return df
