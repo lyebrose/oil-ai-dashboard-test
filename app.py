@@ -356,7 +356,7 @@ def extract_drivers(headlines):
                 counts[bucket] += 1
     return [(k,v) for k,v in sorted(counts.items(), key=lambda x:-x[1]) if v > 0][:4]
 
-NEWS_API_KEY = "af6c0fff-6e00-4579-98c4-26d0fc50ef1d
+NEWS_API_KEY = "af6c0fff-6e00-4579-98c4-26d0fc50ef1d"
 
 @st.cache_data(show_spinner=False, ttl=60*30)
 def fetch_geo_headlines(days=7, max_items=10):
