@@ -356,83 +356,33 @@ def extract_drivers(headlines):
                 counts[bucket] += 1
     return [(k,v) for k,v in sorted(counts.items(), key=lambda x:-x[1]) if v > 0][:4]
 
-NEWS_API_KEY = "af6c0fff-6e00-4579-98c4-26d0fc50ef1d"
-
 @st.cache_data(show_spinner=False, ttl=60*30)
 def fetch_geo_headlines(days=7, max_items=10):
     cutoff = datetime.utcnow() - timedelta(days=days)
-    
-    # ── Try NewsAPI first ──────────────────────────────────────────────────
-    if NEWS_API_KEY != "af6c0fff-6e00-4579-98c4-26d0fc50ef1d":
+    out = []
+    for feed_url in RSS_FEEDS:
         try:
-            url = (
-                "https://newsapi.org/v2/everything"
-                f"?q=oil+OR+crude+OR+OPEC+OR+WTI+OR+sanctions+OR+pipeline"
-                f"&language=en"
-                f"&sortBy=publishedAt"
-                f"&pageSize={max_items}"
-                f"&apiKey={NEWS_API_KEY}"
-            )
-            r = requests.get(url, timeout=12)
-            r.raise_for_status()
-            articles = r.json().get("articles", [])
-            out = []
-            for a in articles:
-                title = (a.get("title") or "").strip()
+            feed = feedparser.parse(feed_url)
+            for entry in feed.entries:
+                title = (entry.get("title") or "").strip()
                 if not title or not any(kw in title.lower() for kw in OIL_KEYWORDS):
                     continue
-                pub = a.get("publishedAt", "")
-                try:
-                    pub_dt = datetime.strptime(pub[:19], "%Y-%m-%dT%H:%M:%S")
-                    if pub_dt < cutoff:
-                        continue
+                pub = entry.get("published_parsed") or entry.get("updated_parsed")
+                if pub:
+                    pub_dt = datetime(*pub[:6])
+                    if pub_dt < cutoff: continue
                     date_str = pub_dt.strftime("%Y-%m-%d %H:%M")
-                except Exception:
+                else:
                     date_str = ""
-                out.append({
-                    "title": title,
-                    "url":   a.get("url", ""),
-                    "date":  date_str,
-                    "source": (a.get("source") or {}).get("name", ""),
-                })
-            if out:
-                return out[:max_items]
+                out.append({"title": title, "url": entry.get("link",""), "date": date_str, "source": feed.feed.get("title") or feed_url})
         except Exception as e:
-            st.warning(f"NewsAPI failed: {e}")
-
-    # ── Fallback: GDELT ────────────────────────────────────────────────────
-    try:
-        query = "oil OR crude OR OPEC OR WTI OR pipeline OR sanctions OR Iran OR Russia"
-        url = (
-            "https://api.gdeltproject.org/api/v2/doc/doc"
-            f"?query={requests.utils.quote(query)}"
-            f"&mode=artlist&format=json"
-            f"&timespan={days}d"
-            f"&maxrecords={max_items}"
-            f"&sort=datedesc"
-        )
-        r = requests.get(url, timeout=15)
-        r.raise_for_status()
-        if not r.text.strip():
-            raise RuntimeError("GDELT empty response")
-        articles = r.json().get("articles") or []
-        out = []
-        for a in articles:
-            title = (a.get("title") or "").strip()
-            if not title:
-                continue
-            out.append({
-                "title":  title,
-                "url":    a.get("url", ""),
-                "date":   a.get("seendate", ""),
-                "source": a.get("domain", ""),
-            })
-        if out:
-            return out[:max_items]
-    except Exception as e:
-        st.warning(f"GDELT failed: {e}")
-
-    return []
+            st.warning(f"RSS fetch failed for {feed_url}: {e}")
+    seen, deduped = set(), []
+    for h in sorted(out, key=lambda x: x["date"], reverse=True):
+        if h["title"] not in seen:
+            seen.add(h["title"]); deduped.append(h)
+        if len(deduped) >= max_items: break
+    return deduped
 
 def geo_summary(headlines):
     if not headlines:
