@@ -85,6 +85,19 @@ div[data-testid="metric-container"] { background: #FFFFFF; border: 1.5px solid #
 hr { border: none !important; border-top: 1.5px solid #C8DCF0 !important; margin: 1.2rem 0 !important; }
 .stCaption, caption { color: #6B8DAD !important; font-size: 0.78rem !important; }
 /* Force white background on dataframe */
+div[data-testid="stDataFrame"] table {
+    background: #FFFFFF !important;
+}
+
+div[data-testid="stDataFrame"] th {
+    background: #F3F7FD !important;
+    color: #1E3A5F !important;
+    font-weight: 700;
+}
+
+div[data-testid="stDataFrame"] td {
+    background: #FFFFFF !important;
+}
 div[data-testid="stDataFrame"] iframe,
 div[data-testid="stDataFrame"] > div {
     background: #FFFFFF !important;
