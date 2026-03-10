@@ -413,7 +413,7 @@ with tab1:
         </div>""", unsafe_allow_html=True)
 
         bands = pd.DataFrame({
-            "Scenario":  ["Expected","1sigma low","1sigma high","2sigma low","2sigma high"],
+            "Scenario":  ["Expected","1σ low","1σhigh","2σ low","2σ high"],
             "Price ($)": [price_exp, price_1s_low, price_1s_high, price_2s_low, price_2s_high],
             "P/L ($)":   [pl_exp,    pl_1s_low,    pl_1s_high,    pl_2s_low,    pl_2s_high],
         })
