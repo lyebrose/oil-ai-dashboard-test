@@ -12,13 +12,38 @@ from data import load_wti
 from features import add_technical_features, make_targets, build_model_frame
 from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
 import logging
+# TEMPORARY DEBUG — remove after diagnosing
+import logging
 logging.basicConfig(level=logging.WARNING)
-logging.getLogger("data").setLevel(logging.INFO)
-RSS_FEEDS = [
-    "https://feeds.reuters.com/reuters/businessNews",
-    "https://feeds.bbci.co.uk/news/business/rss.xml",
-    "https://www.ft.com/rss/home",
-]
+logging.getLogger("data").setLevel(logging.DEBUG)
+
+# Force test each source directly
+import streamlit as st
+with st.expander("🔧 Data source debug (remove after fixing)"):
+    import pandas as pd
+    start_dt = pd.to_datetime("2025-01-01")
+    
+    # Test yfinance
+    try:
+        import yfinance as yf
+        raw = yf.download("CL=F", start="2025-01-01", progress=False, auto_adjust=True)
+        st.write(f"✅ yfinance: {len(raw)} rows, cols={raw.columns.tolist()}, latest={raw.index[-1].date()}")
+    except Exception as e:
+        st.write(f"❌ yfinance: {e}")
+
+    # Test Stooq
+    try:
+        raw2 = pd.read_csv("https://stooq.com/q/d/l/?s=cl.f&i=d")
+        st.write(f"✅ Stooq: {len(raw2)} rows, cols={raw2.columns.tolist()}, latest={raw2['Date'].iloc[-1]}")
+    except Exception as e:
+        st.write(f"❌ Stooq: {e}")
+
+    # Test FRED
+    try:
+        raw3 = pd.read_csv("https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILWTICO")
+        st.write(f"✅ FRED: {len(raw3)} rows, latest={raw3.iloc[-1,0]}")
+    except Exception as e:
+        st.write(f"❌ FRED: {e}")
 
 OIL_KEYWORDS = [
     "oil", "crude", "wti", "brent", "opec", "energy", "petroleum",
