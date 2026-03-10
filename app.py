@@ -11,7 +11,9 @@ import feedparser
 from data import load_wti
 from features import add_technical_features, make_targets, build_model_frame
 from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
-
+import logging
+logging.basicConfig(level=logging.WARNING)
+logging.getLogger("data").setLevel(logging.INFO)
 RSS_FEEDS = [
     "https://feeds.reuters.com/reuters/businessNews",
     "https://feeds.bbci.co.uk/news/business/rss.xml",
