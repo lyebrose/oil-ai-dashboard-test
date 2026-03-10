@@ -54,6 +54,27 @@ section[data-testid="stSidebar"] label, section[data-testid="stSidebar"] p, sect
 section[data-testid="stSidebar"] h3 { color: #2563EB !important; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.8px; }
 .stButton > button { background: linear-gradient(135deg, #2563EB 0%, #38BDF8 100%) !important; color: #FFFFFF !important; border-radius: 10px !important; border: 0 !important; padding: 9px 18px !important; font-weight: 700 !important; font-size: 0.85rem !important; box-shadow: 0 2px 8px rgba(37,99,235,0.25) !important; }
 .stButton > button:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.40) !important; transform: translateY(-1px) !important; }
+/* ---------- Input Widgets (make them white) ---------- */
+.stNumberInput input,
+.stTextInput input,
+.stSelectbox div[data-baseweb="select"] > div,
+.stMultiSelect div[data-baseweb="select"] > div {
+    background-color: #FFFFFF !important;
+    color: #1E3A5F !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(30,58,95,0.15) !important;
+}
+/* +/- buttons inside number input */
+.stNumberInput button {
+    background-color: #FFFFFF !important;
+    color: #1E3A5F !important;
+    border: 1px solid rgba(30,58,95,0.15) !important;
+}
+.stNumberInput input:focus,
+.stTextInput input:focus {
+    border: 1px solid #88BDF2 !important;
+    box-shadow: 0 0 0 1px rgba(136,189,242,0.4);
+}
 div[data-testid="stDataFrame"] { border-radius: 14px !important; overflow: hidden !important; border: 1.5px solid #C8DCF0 !important; }
 .stTabs [data-baseweb="tab-list"] { gap: 4px; background: transparent; border-bottom: 2px solid #C8DCF0; }
 .stTabs [data-baseweb="tab"] { border-radius: 8px 8px 0 0 !important; padding: 8px 20px !important; font-weight: 600 !important; color: #6B8DAD !important; background: transparent !important; border: none !important; }
