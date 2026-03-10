@@ -16,18 +16,14 @@ EIA_API_KEY = "ByOQgCLHkMjNN2smurIgrhoRSnEXChaYfk1A0uNC"
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
-    """
-    Yahoo Finance CL=F (front-month WTI futures).
-    Best for live/intraday-fresh daily prices.
-    """
     raw = yf.download("CL=F", start=start_dt.strftime("%Y-%m-%d"),
                       progress=False, auto_adjust=True)
     if raw.empty:
         raise RuntimeError("yfinance returned empty DataFrame.")
 
-    # Newer yfinance returns MultiIndex columns like ("Close", "CL=F")
+    # Fix: columns are tuples like ('Close', 'CL=F') — extract just the name
     if isinstance(raw.columns, pd.MultiIndex):
-        raw.columns = [col[0] for col in raw.columns]
+        raw.columns = [col[0] for col in raw.columns.tolist()]
 
     if "Close" not in raw.columns:
         raise RuntimeError(f"yfinance: no Close column. Got: {raw.columns.tolist()}")
@@ -41,7 +37,6 @@ def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
 
     if out.empty:
         raise RuntimeError("yfinance: no usable rows after cleaning.")
-    logger.info(f"yfinance: {len(out)} rows, latest={out.index[-1].date()}")
     return out
 
 
