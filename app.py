@@ -407,7 +407,9 @@ with tab1:
             "P/L ($)":   [pl_exp,    pl_1s_low,    pl_1s_high,    pl_2s_low,    pl_2s_high],
         })
         st.markdown("##### Risk bands")
-        st.dataframe(bands.style.format({"Price ($)":"${:,.2f}","P/L ($)":"{:+,.2f}"}), use_container_width=True)
+        bands["Price ($)"] = bands["Price ($)"].apply(lambda x: f"${x:,.2f}")
+        bands["P/L ($)"]   = bands["P/L ($)"].apply(lambda x: f"{x:+,.2f}")
+        st.dataframe(bands, use_container_width=True, hide_index=True)
 
     with sim_right:
         if sim_mode == "WTI futures (CL)":
