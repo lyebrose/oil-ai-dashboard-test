@@ -14,6 +14,41 @@ EIA_API_KEY = "ByOQgCLHkMjNN2smurIgrhoRSnEXChaYfk1A0uNC"
 # ══════════════════════════════════════════════════════════════════════════════
 # PRICE SOURCES
 # ══════════════════════════════════════════════════════════════════════════════
+
+OILPRICE_API_KEY = "6db9ead660e8a1e6620558739193c1867c06786ca86886e5dee9e9fc15528ce3"
+
+def _load_oilpriceapi(start_dt: pd.Timestamp) -> pd.DataFrame:
+    """
+    OilPriceAPI.com — real-time WTI, 1,000 free requests/month.
+    Docs: https://docs.oilpriceapi.com
+    """
+    url = "https://api.oilpriceapi.com/v1/prices/past_day"
+    headers = {"Authorization": f"Token {OILPRICE_API_KEY}"}
+    
+    # Fetch historical range
+    history_url = "https://api.oilpriceapi.com/v1/prices/history"
+    params = {
+        "by_code": "WTI_USD",
+        "start_date": start_dt.strftime("%Y-%m-%d"),
+    }
+    r = requests.get(history_url, headers=headers, params=params, timeout=15)
+    r.raise_for_status()
+    rows = r.json().get("data", [])
+    if not rows:
+        raise RuntimeError("OilPriceAPI: empty response.")
+
+    df = pd.DataFrame(rows)
+    df["Date"]   = pd.to_datetime(df["created_at"]).dt.tz_localize(None).dt.normalize()
+    df["Settle"] = pd.to_numeric(df["price"], errors="coerce")
+    df = df[["Date", "Settle"]].dropna().set_index("Date").sort_index()
+    df = df[~df.index.duplicated(keep="last")]
+    df = df[df.index >= start_dt]
+
+    if df.empty:
+        raise RuntimeError("OilPriceAPI: no rows after filtering.")
+    logger.info(f"OilPriceAPI: {len(df)} rows, latest={df.index[-1].date()}")
+    return df
+    
 def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
 
     raw = yf.download(
@@ -118,10 +153,11 @@ def load_wti(start: str = "2023-01-01") -> pd.DataFrame:
     """
     start_dt = pd.to_datetime(start)
     for name, loader in [
-        ("yfinance", lambda: _load_yfinance(start_dt)),
-        ("EIA spot", lambda: _load_eia_price(start_dt)),
-        ("Stooq",    lambda: _load_stooq(start_dt)),
-        ("FRED",     lambda: _load_fred_price(start_dt)),
+        ("yfinance",    lambda: _load_yfinance(start_dt)),
+        ("EIA spot",    lambda: _load_eia_price(start_dt)),
+        ("Stooq",       lambda: _load_stooq(start_dt)),
+        ("OilPriceAPI", lambda: _load_oilpriceapi(start_dt)),  # ← new
+        ("FRED",        lambda: _load_fred_price(start_dt)),
     ]:
         try:
             return loader()
