@@ -144,7 +144,7 @@ def apply_layout(fig, title="", height=500):
 st.markdown("""
 <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
     <div style="background:linear-gradient(135deg,#2563EB 0%,#38BDF8 100%);border-radius:14px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(37,99,235,0.32);flex-shrink:0;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="12" cy="5" rx="7" ry="2.5" fill="white" opacity="0.9"/>
             <path d="M5 5v14c0 1.38 3.13 2.5 7 2.5s7-1.12 7-2.5V5" stroke="white" stroke-width="1.5" fill="none" opacity="0.9"/>
             <line x1="5" y1="10" x2="19" y2="10" stroke="white" stroke-width="1.5" opacity="0.6"/>
