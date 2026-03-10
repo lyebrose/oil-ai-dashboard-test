@@ -6,77 +6,19 @@ import plotly.graph_objects as go
 import requests
 from datetime import datetime, timedelta
 import math
-import requests
-import pandas as pd
+import feedparser
 
 from data import load_wti
 from features import add_technical_features, make_targets, build_model_frame
 from model import walk_forward_backtest, train_latest_model, FEATURE_COLS
 import logging
-# TEMPORARY DEBUG — remove after diagnosing
-import logging
 logging.basicConfig(level=logging.WARNING)
-logging.getLogger("data").setLevel(logging.DEBUG)
-
-# Force test each source directly
-import streamlit as st
-
-def fetch_oil_geopolitics(max_records=10):
-
-    query = '(oil OR crude OR opec OR tanker OR refinery OR sanctions OR iran OR russia OR saudi OR "red sea" OR shipping)'
-
-    url = "https://api.gdeltproject.org/api/v2/doc/doc"
-
-    params = {
-        "query": query,
-        "mode": "ArtList",
-        "maxrecords": max_records,
-        "format": "json",
-        "sort": "DateDesc",
-        "timespan": "1day"
-    }
-
-    r = requests.get(url, params=params, timeout=10)
-    r.raise_for_status()
-
-    data = r.json()
-    articles = []
-
-    for a in data.get("articles", []):
-        articles.append({
-            "title": a["title"],
-            "url": a["url"],
-            "source": a.get("sourceCommonName", ""),
-            "date": a["seendate"]
-        })
-
-    return pd.DataFrame(articles)
-    
-with st.expander("🔧 Data source debug (remove after fixing)"):
-    import pandas as pd
-    start_dt = pd.to_datetime("2025-01-01")
-    
-    # Test yfinance
-    try:
-        import yfinance as yf
-        raw = yf.download("CL=F", start="2025-01-01", progress=False, auto_adjust=True)
-        st.write(f"✅ yfinance: {len(raw)} rows, cols={raw.columns.tolist()}, latest={raw.index[-1].date()}")
-    except Exception as e:
-        st.write(f"❌ yfinance: {e}")
-
-    # Test Stooq
-    try:
-        raw2 = pd.read_csv("https://stooq.com/q/d/l/?s=cl.f&i=d")
-        st.write(f"✅ Stooq: {len(raw2)} rows, cols={raw2.columns.tolist()}, latest={raw2['Date'].iloc[-1]}")
-    except Exception as e:
-        st.write(f"❌ Stooq: {e}")
-
-    # Test FRED
-    try:
-        raw3 = pd.read_csv("https://fred.stlouisfed.org/graph/fredgraph.csv?id=DCOILWTICO")
-        st.write(f"✅ FRED: {len(raw3)} rows, latest={raw3.iloc[-1,0]}")
-    except Exception as e:
-        st.write(f"❌ FRED: {e}")
+logging.getLogger("data").setLevel(logging.INFO)
+RSS_FEEDS = [
+    "https://feeds.reuters.com/reuters/businessNews",
+    "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "https://www.ft.com/rss/home",
+]
 
 OIL_KEYWORDS = [
     "oil", "crude", "wti", "brent", "opec", "energy", "petroleum",
@@ -389,6 +331,34 @@ def extract_drivers(headlines):
                 counts[bucket] += 1
     return [(k,v) for k,v in sorted(counts.items(), key=lambda x:-x[1]) if v > 0][:4]
 
+@st.cache_data(show_spinner=False, ttl=60*30)
+def fetch_geo_headlines(days=7, max_items=10):
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    out = []
+    for feed_url in RSS_FEEDS:
+        try:
+            feed = feedparser.parse(feed_url)
+            for entry in feed.entries:
+                title = (entry.get("title") or "").strip()
+                if not title or not any(kw in title.lower() for kw in OIL_KEYWORDS):
+                    continue
+                pub = entry.get("published_parsed") or entry.get("updated_parsed")
+                if pub:
+                    pub_dt = datetime(*pub[:6])
+                    if pub_dt < cutoff: continue
+                    date_str = pub_dt.strftime("%Y-%m-%d %H:%M")
+                else:
+                    date_str = ""
+                out.append({"title": title, "url": entry.get("link",""), "date": date_str, "source": feed.feed.get("title") or feed_url})
+        except Exception as e:
+            st.warning(f"RSS fetch failed for {feed_url}: {e}")
+    seen, deduped = set(), []
+    for h in sorted(out, key=lambda x: x["date"], reverse=True):
+        if h["title"] not in seen:
+            seen.add(h["title"]); deduped.append(h)
+        if len(deduped) >= max_items: break
+    return deduped
+
 def geo_summary(headlines):
     if not headlines:
         return 0.0, {"up":0,"down":0,"mixed":0,"unclear":0}, "No headlines loaded."
@@ -571,9 +541,7 @@ with tab1:
         section_header("🌍 Geopolitical Headlines")
         st.caption("Recent oil-relevant headlines - heuristic impact scoring")
         try:
-            news_df = fetch_oil_geopolitics(max_records=geo_max_items)
-
-            headlines = news_df.to_dict("records")
+            headlines = fetch_geo_headlines(days=geo_days, max_items=geo_max_items)
         except Exception:
             headlines = []
 
