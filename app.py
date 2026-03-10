@@ -452,10 +452,29 @@ with tab1:
             "P/L ($)":   [pl_exp,    pl_1s_low,    pl_1s_high,    pl_2s_low,    pl_2s_high],
         })
         st.markdown("##### Risk bands")
-        bands["Price ($)"] = bands["Price ($)"].apply(lambda x: f"${x:,.2f}")
-        bands["P/L ($)"]   = bands["P/L ($)"].apply(lambda x: f"{x:+,.2f}")
-        st.dataframe(bands, use_container_width=True, hide_index=True)
-
+                rows_html = ""
+                for _, row in bands.iterrows():
+                    price_fmt = f"${row['Price ($)']:,.2f}"
+                    pl_val    = row["P/L ($)"]
+                    pl_color  = "#0EA5E9" if pl_val >= 0 else "#F97316"
+                    pl_fmt    = f"{pl_val:+,.2f}"
+                    rows_html += f"""
+                    <tr>
+                        <td style="padding:10px 14px;font-weight:600;color:#0F2A4A;font-size:0.87rem;">{row['Scenario']}</td>
+                        <td style="padding:10px 14px;color:#0F2A4A;font-family:'DM Mono',monospace;font-size:0.87rem;">{price_fmt}</td>
+                        <td style="padding:10px 14px;font-family:'DM Mono',monospace;font-size:0.87rem;font-weight:700;color:{pl_color};">{pl_fmt}</td>
+                    </tr>"""
+                st.markdown(f"""
+                <table style="width:100%;border-collapse:collapse;background:#FFFFFF;border-radius:12px;overflow:hidden;border:1.5px solid #C8DCF0;">
+                    <thead>
+                        <tr style="background:#F3F7FD;border-bottom:1.5px solid #C8DCF0;">
+                            <th style="padding:10px 14px;text-align:left;font-size:0.75rem;font-weight:700;color:#6B8DAD;text-transform:uppercase;letter-spacing:0.5px;">Scenario</th>
+                            <th style="padding:10px 14px;text-align:left;font-size:0.75rem;font-weight:700;color:#6B8DAD;text-transform:uppercase;letter-spacing:0.5px;">Price</th>
+                            <th style="padding:10px 14px;text-align:left;font-size:0.75rem;font-weight:700;color:#6B8DAD;text-transform:uppercase;letter-spacing:0.5px;">P/L ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody>{rows_html}</tbody>
+                </table>""", unsafe_allow_html=True)
     with sim_right:
         if sim_mode == "WTI futures (CL)":
             ok = sim_amount >= margin_used
