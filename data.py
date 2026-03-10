@@ -14,35 +14,26 @@ EIA_API_KEY = "ByOQgCLHkMjNN2smurIgrhoRSnEXChaYfk1A0uNC"
 # ══════════════════════════════════════════════════════════════════════════════
 # PRICE SOURCES
 # ══════════════════════════════════════════════════════════════════════════════
-
 def _load_yfinance(start_dt: pd.Timestamp) -> pd.DataFrame:
-    # Download with a buffer — go back 30 extra days in case of gaps
-    fetch_start = (start_dt - pd.Timedelta(days=30)).strftime("%Y-%m-%d")
-    
-    raw = yf.download("CL=F", start=fetch_start, progress=False, auto_adjust=True)
-    
+
+    raw = yf.download(
+        "CL=F",
+        start=start_dt.strftime("%Y-%m-%d"),
+        progress=False,
+        auto_adjust=True,
+    )
+
     if raw.empty:
         raise RuntimeError("yfinance returned empty DataFrame.")
 
-    # Flatten MultiIndex columns ('Close', 'CL=F') -> 'Close'
     if isinstance(raw.columns, pd.MultiIndex):
-        raw.columns = [col[0] for col in raw.columns.tolist()]
+        raw.columns = raw.columns.get_level_values(0)
 
-    if "Close" not in raw.columns:
-        raise RuntimeError(f"yfinance: no Close column. Got: {raw.columns.tolist()}")
+    df = raw[["Close"]].rename(columns={"Close": "Settle"})
+    df.index = pd.to_datetime(df.index).normalize()
+    df = df.dropna()
 
-    out = raw[["Close"]].rename(columns={"Close": "Settle"}).copy()
-    out.index = pd.to_datetime(out.index.date)  # strip timezone if present
-    out = out.sort_index()
-    out["Settle"] = pd.to_numeric(out["Settle"], errors="coerce")
-    out = out.dropna()
-    
-    # Filter AFTER cleaning, not before — was causing empty result
-    out = out[out.index >= start_dt.date()]
-
-    if out.empty:
-        raise RuntimeError("yfinance: no usable rows after cleaning.")
-    return out
+    return df
 
 
 def _load_eia_price(start_dt: pd.Timestamp) -> pd.DataFrame:
