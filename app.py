@@ -143,7 +143,15 @@ def apply_layout(fig, title="", height=500):
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.markdown("""
 <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px;">
-    <div style="background:linear-gradient(135deg,#2563EB 0%,#38BDF8 100%);border-radius:14px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 4px 14px rgba(37,99,235,0.32);flex-shrink:0;">🛢️</div>
+    <div style="background:linear-gradient(135deg,#2563EB 0%,#38BDF8 100%);border-radius:14px;width:46px;height:46px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(37,99,235,0.32);flex-shrink:0;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="12" cy="5" rx="7" ry="2.5" fill="white" opacity="0.9"/>
+            <path d="M5 5v14c0 1.38 3.13 2.5 7 2.5s7-1.12 7-2.5V5" stroke="white" stroke-width="1.5" fill="none" opacity="0.9"/>
+            <line x1="5" y1="10" x2="19" y2="10" stroke="white" stroke-width="1.5" opacity="0.6"/>
+            <line x1="5" y1="15" x2="19" y2="15" stroke="white" stroke-width="1.5" opacity="0.6"/>
+            <line x1="12" y1="7.5" x2="12" y2="19.5" stroke="white" stroke-width="1" opacity="0.4"/>
+        </svg>
+    </div>
     <div>
         <div style="font-size:1.6rem;font-weight:800;color:#0F2A4A;line-height:1.1;font-family:'DM Sans',sans-serif;">BarrelX</div>
         <div style="font-size:0.75rem;color:#6B8DAD;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;">AI-Powered WTI Market Dashboard</div>
