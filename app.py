@@ -63,6 +63,17 @@ div[data-testid="metric-container"] { background: #FFFFFF; border: 1.5px solid #
 .stProgress > div { background: #C8DCF0 !important; border-radius: 999px !important; }
 hr { border: none !important; border-top: 1.5px solid #C8DCF0 !important; margin: 1.2rem 0 !important; }
 .stCaption, caption { color: #6B8DAD !important; font-size: 0.78rem !important; }
+/* Force white background on dataframe */
+div[data-testid="stDataFrame"] iframe,
+div[data-testid="stDataFrame"] > div {
+    background: #FFFFFF !important;
+}
+[data-testid="stDataFrame"] [class*="cell"],
+[data-testid="stDataFrame"] [class*="row"],
+[data-testid="stDataFrame"] table {
+    background: #FFFFFF !important;
+    background-color: #FFFFFF !important;
+}
 header[data-testid="stHeader"] { background: #EEF4FB !important; border-bottom: 1px solid #C8DCF0 !important; }
 </style>
 """, unsafe_allow_html=True)
